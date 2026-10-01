@@ -90,4 +90,22 @@ describe('resolveTouch', () => {
     expect(resolveTouch(context)).toEqual(resolveTouch(context));
     expect(resolveTouch(context).rng).not.toBe(context.rng);
   });
+
+  it('changes the ball smoothly as the aim moves, with no jumps (attack and set)', () => {
+    const attack: TouchContext = {
+      ...setContext,
+      contactPosition: contactPoint(toucher, 'spike'),
+      action: 'attack',
+      technique: 'spike',
+    };
+    for (const context of [attack, setContext]) {
+      let previous = resolveTouch({ ...context, aim: { lateral: -0.5, force: 0.05 } }).velocity;
+      for (let i = 1; i <= 90; i++) {
+        const aim = { lateral: -0.5 + i / 90, force: 0.05 + (0.9 * i) / 90 };
+        const velocity = resolveTouch({ ...context, aim }).velocity;
+        expect(Vec3.distance(velocity, previous)).toBeLessThan(0.6);
+        previous = velocity;
+      }
+    }
+  });
 });

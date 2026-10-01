@@ -245,6 +245,15 @@ describe('stepWorld: a player-controlled athlete', () => {
       throw new Error('the ball never rested in the hands');
     }
 
+    it('judges the timing the moment the player commits', () => {
+      const { events } = run(playerWorld(), 3, commitOnTime);
+      const committed = eventsOf(events, 'touch-committed').find(
+        (event) => event.athleteId === ATHLETE_A_ID,
+      );
+      expect(committed?.technique).toBe('spike');
+      expect(Math.abs(committed?.timingErrorS ?? 1)).toBeLessThan(DT);
+    });
+
     it('rests the ball in the hands while the player aims', () => {
       const held = untilHeld();
       const later = run(held, 0.2).world;

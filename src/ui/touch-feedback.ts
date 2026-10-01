@@ -22,7 +22,7 @@ const MISS_LABELS: Readonly<Record<TouchMissReason, string>> = {
 };
 
 export interface TouchFeedback {
-  /** Shows a short message for the player's own touches and misses. */
+  /** Shows a short message when the player commits to a touch, or misses one. */
   onEvent(event: WorldEvent): void;
 }
 
@@ -43,7 +43,8 @@ export function createTouchFeedback(parent: HTMLElement, playerId: AthleteId): T
 
   return {
     onEvent(event) {
-      if (event.type === 'ball-touched' && event.athleteId === playerId) {
+      // The timing is shown the moment the player commits, so they aim already knowing it.
+      if (event.type === 'touch-committed' && event.athleteId === playerId) {
         const perfect = Math.abs(event.timingErrorS) <= FEEDBACK_PERFECT_TIMING_S;
         const timing = perfect ? 'Perfeito!' : event.timingErrorS < 0 ? 'Adiantado' : 'Atrasado';
         show(`${TECHNIQUE_LABELS[event.technique]} · ${timing}`, perfect ? 'good' : 'ok');

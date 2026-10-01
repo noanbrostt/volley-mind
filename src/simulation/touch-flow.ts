@@ -90,6 +90,15 @@ export function applyTouchCommand(
     };
   }
   const incoming = releaseTouch(drill.incoming, command.aim ?? null, nowTick, dt);
+  if (incoming.release && !drill.incoming.release && incoming.plan) {
+    events.push({
+      type: 'touch-committed',
+      tick: nowTick,
+      athleteId: command.athleteId,
+      technique: incoming.plan.technique,
+      timingErrorS: timingErrorAt(incoming, nowTick, dt),
+    });
+  }
   if (incoming.spent && !drill.incoming.spent) {
     const reason = timingErrorAt(drill.incoming, nowTick, dt) < 0 ? 'early' : 'late';
     events.push({ type: 'touch-missed', tick: nowTick, athleteId: command.athleteId, reason });

@@ -64,17 +64,20 @@ export function resolveTouch(context: TouchContext): TouchResolution {
     Vec3.create(Math.cos(errorAngle) * errorRadius, 0, Math.sin(errorAngle) * errorRadius),
   );
   const signedNoise = trajectoryNoise.value * 2 - 1;
-  const trajectory = scatterTrajectory(ideal.trajectory, forceScale, miss * signedNoise);
+  const trajectory = scatterTrajectory(ideal.trajectory, miss * signedNoise);
+  const launch = launchToward(context, target, trajectory);
 
+  // A driven ball keeps its launch direction and the force scales its speed: smooth as the
+  // aim changes, where re-solving at a lower speed could flip to a lob (Noan saw jumps).
   return {
-    velocity: launchToward(context, target, trajectory),
+    velocity: trajectory.kind === 'drive' ? Vec3.scale(launch, forceScale) : launch,
     rng: trajectoryNoise.next,
   };
 }
 
 /**
  * Lateral drag moves the target sideways. Force moves an arc's target nearer or farther; a
- * driven ball keeps its target and changes speed instead (see scatterTrajectory).
+ * driven ball keeps its target and changes speed instead (see resolveTouch).
  */
 function aimPoint(
   context: TouchContext,
@@ -92,15 +95,15 @@ function aimPoint(
   return Vec3.add(Vec3.add(from, Vec3.scale(reach, distanceScale)), sideways);
 }
 
-/** A driven ball's speed follows the force; quality noise changes heights and speeds. */
-function scatterTrajectory(trajectory: Trajectory, forceScale: number, noise: number): Trajectory {
+/** Quality noise changes arc heights and driven speeds. */
+function scatterTrajectory(trajectory: Trajectory, noise: number): Trajectory {
   if (trajectory.kind === 'arc') {
     const rise = trajectory.rise + noise * TOUCH_MAX_RISE_ERROR_M;
     return { kind: 'arc', rise: Math.max(MIN_ARC_RISE_M, rise) };
   }
   return {
     kind: 'drive',
-    speed: trajectory.speed * forceScale * (1 + noise * TOUCH_MAX_SPEED_ERROR_RATIO),
+    speed: trajectory.speed * (1 + noise * TOUCH_MAX_SPEED_ERROR_RATIO),
   };
 }
 

@@ -23,6 +23,15 @@ export type WorldEvent =
       readonly badBallReasons: readonly BadBallReason[];
     }
   | {
+      /** The toucher committed to the touch in time: the timing is already judged. */
+      readonly type: 'touch-committed';
+      readonly tick: number;
+      readonly athleteId: AthleteId;
+      readonly technique: Technique;
+      /** Touch moment minus the ideal one, in s (negative = early). */
+      readonly timingErrorS: number;
+    }
+  | {
       readonly type: 'touch-missed';
       readonly tick: number;
       readonly athleteId: AthleteId;
