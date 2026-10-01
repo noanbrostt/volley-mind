@@ -5,6 +5,11 @@ body {
   height: 100%;
   overflow: hidden;
   background: #8fc9ec;
+  /* No pull-to-refresh, scroll chaining or rubber-band bounce on mobile. */
+  overscroll-behavior: none;
+  /* Keep the browser from resizing text when rotating the phone. */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 #game {
@@ -14,5 +19,8 @@ body {
   /* Touches drive the game; the browser must not pan, zoom or select. */
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   outline: none;
 }

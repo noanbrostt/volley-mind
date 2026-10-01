@@ -15,6 +15,9 @@ if (!canvas) {
   throw new Error('Missing <canvas id="game"> in index.html');
 }
 
+// A long press on mobile would open the "save image" menu over the game.
+canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
 const engine = createEngine(canvas);
 watchCanvasResize(engine);
 const view = createBeachScene(engine);

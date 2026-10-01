@@ -1,7 +1,8 @@
 .fps-counter {
   position: fixed;
-  top: 8px;
-  left: 8px;
+  /* viewport-fit=cover draws under the notch, so stay inside the safe area. */
+  top: max(8px, env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
   padding: 2px 6px;
   border-radius: 4px;
   background: rgb(0 0 0 / 55%);

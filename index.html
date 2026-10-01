@@ -2,8 +2,17 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Game viewport: no pinch or double-tap zoom, and draw under the notch (viewport-fit). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>Volley Mind</title>
+    <meta name="description" content="Jogo 3D de vôlei para o navegador, pensado para o celular." />
+    <meta name="theme-color" content="#8fc9ec" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
   </head>
   <body>
     <canvas id="game"></canvas>
