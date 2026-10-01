@@ -5,6 +5,7 @@ import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import type { Scene } from '@babylonjs/core/scene';
 import { AIM_PATH_COLOR_HEX, AIM_PATH_POINTS } from '@config/court-scene';
 import type { Vec3 } from '@core/vec3';
+import { OVERLAY_RENDERING_GROUP } from './overlay-rendering-group';
 
 export interface AimPath {
   /** Draws the predicted arc of the ball; an empty path hides it. */
@@ -21,6 +22,7 @@ export function createAimPath(scene: Scene): AimPath {
   const lines: LinesMesh = CreateLines('aim-path', { points: buffer, updatable: true }, scene);
   lines.color = Color3.FromHexString(AIM_PATH_COLOR_HEX);
   lines.isPickable = false;
+  lines.renderingGroupId = OVERLAY_RENDERING_GROUP;
   lines.setEnabled(false);
 
   return {

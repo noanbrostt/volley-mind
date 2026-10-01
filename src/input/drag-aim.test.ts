@@ -1,15 +1,17 @@
 import { AIM_IDEAL_FORCE } from '@config/touch';
 import { CONTROL_MAX_AIM_ANGLE_RAD } from '@config/touch-control';
 import { describe, expect, it } from 'vitest';
-import { aimFromDrag, idealDragLength, TAP_AIM } from './drag-aim';
+import { aimFromDrag, idealDragLength } from './drag-aim';
 
 const FULL = 200;
 const from = (dx: number, dy: number) => ({ startX: 100, startY: 300, x: 100 + dx, y: 300 + dy });
 
 describe('aimFromDrag', () => {
-  it('treats a tap or a tiny drag as the ideal aim', () => {
-    expect(aimFromDrag(from(0, 0), FULL)).toBe(TAP_AIM);
-    expect(aimFromDrag(from(5, -5), FULL)).toBe(TAP_AIM);
+  it('gives a tap no free aim: straight ahead with almost no force', () => {
+    expect(aimFromDrag(from(0, 0), FULL)).toEqual({ lateral: 0, force: 0 });
+    const tiny = aimFromDrag(from(5, -5), FULL);
+    expect(tiny.lateral).toBe(0);
+    expect(tiny.force).toBeLessThan(0.05);
   });
 
   it('reads a drag straight up at the ideal length as the ideal aim', () => {

@@ -8,7 +8,7 @@ import { uniformAttributes } from '@domain/athlete/attributes';
 import { IDEAL_AIM } from '@domain/contact/touch-aim';
 import { describe, expect, it } from 'vitest';
 import { stepWorld } from './step-world';
-import { previewTouchPath } from './touch-flow';
+import { aimTimeLeft, previewTouchPath } from './touch-flow';
 import type { WorldCommand } from './world-command';
 import type { WorldEvent } from './world-event';
 import {
@@ -253,14 +253,54 @@ describe('stepWorld: a player-controlled athlete', () => {
 
     it('sends the ball once the aim arrives', () => {
       const held = untilHeld();
-      const aim: WorldCommand = { type: 'aim', athleteId: ATHLETE_A_ID, aim: IDEAL_AIM };
+      const aim: WorldCommand = {
+        type: 'aim',
+        athleteId: ATHLETE_A_ID,
+        aim: IDEAL_AIM,
+        final: true,
+      };
       const { events } = stepWorld(held, [aim], DT);
       expect(eventsOf(events, 'ball-touched')[0]?.athleteId).toBe(ATHLETE_A_ID);
     });
 
-    it('sends the ball with the ideal aim when the hold runs out', () => {
-      const { events } = run(untilHeld(), AIM_HOLD_MAX_S + 2 * DT);
-      expect(eventsOf(events, 'ball-touched')[0]?.athleteId).toBe(ATHLETE_A_ID);
+    it('keeps the ball while the aim is only a draft', () => {
+      const held = untilHeld();
+      const draft: WorldCommand = {
+        type: 'aim',
+        athleteId: ATHLETE_A_ID,
+        aim: IDEAL_AIM,
+        final: false,
+      };
+      const { events, world } = stepWorld(held, [draft], DT);
+      expect(eventsOf(events, 'ball-touched')).toEqual([]);
+      expect(world.ball.position).toEqual(held.ball.position);
+    });
+
+    it('sends the ball with the latest draft when time runs out', () => {
+      const held = untilHeld();
+      const draft: WorldCommand = {
+        type: 'aim',
+        athleteId: ATHLETE_A_ID,
+        aim: IDEAL_AIM,
+        final: false,
+      };
+      const withDraft = run(stepWorld(held, [draft], DT).world, AIM_HOLD_MAX_S + 2 * DT);
+      const withoutDraft = run(held, AIM_HOLD_MAX_S + 2 * DT);
+      const drafted = eventsOf(withDraft.events, 'ball-touched')[0];
+      const unaimed = eventsOf(withoutDraft.events, 'ball-touched')[0];
+      expect(drafted?.athleteId).toBe(ATHLETE_A_ID);
+      // Never aiming is not free: it costs quality compared with the drafted ideal aim.
+      expect(unaimed?.quality ?? 1).toBeLessThan(drafted?.quality ?? 0);
+    });
+
+    it('counts down the aiming time, and stops counting once the ball leaves', () => {
+      const held = untilHeld();
+      const time = aimTimeLeft(held, ATHLETE_A_ID, DT);
+      expect(time?.remainingS).toBeGreaterThan(0);
+      expect(time?.remainingS).toBeLessThanOrEqual(time?.totalS ?? 0);
+      const later = aimTimeLeft(run(held, 0.1).world, ATHLETE_A_ID, DT);
+      expect(later?.remainingS).toBeLessThan(time?.remainingS ?? 0);
+      expect(aimTimeLeft(run(held, AIM_HOLD_MAX_S + 2 * DT).world, ATHLETE_A_ID, DT)).toBeNull();
     });
 
     it('previews the arc to the partner once committed, and nothing before', () => {

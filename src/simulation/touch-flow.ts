@@ -9,6 +9,7 @@ import type { BallState } from '@domain/ball/ball-state';
 import { stepBall } from '@domain/ball/step-ball';
 import type { Action } from '@domain/contact/action';
 import {
+  aimDeadlineTick,
   chooseAim,
   createIncomingTouch,
   hasWindowClosed,
@@ -20,7 +21,7 @@ import {
 } from '@domain/contact/incoming-touch';
 import { planTouch } from '@domain/contact/plan-touch';
 import { resolveTouch } from '@domain/contact/resolve-touch';
-import { IDEAL_AIM, type TouchAim } from '@domain/contact/touch-aim';
+import { NO_AIM, type TouchAim } from '@domain/contact/touch-aim';
 import { isWithinReach, touchQuality } from '@domain/contact/touch-quality';
 import { nextActionAfter, partnerOf } from '@domain/drills/attack-defense/drill-state';
 import type { WorldCommand } from './world-command';
@@ -85,7 +86,7 @@ export function applyTouchCommand(
   if (command.type === 'aim') {
     return {
       ...world,
-      drill: { phase: 'rally', incoming: chooseAim(drill.incoming, command.aim) },
+      drill: { phase: 'rally', incoming: chooseAim(drill.incoming, command.aim, command.final) },
     };
   }
   const incoming = releaseTouch(drill.incoming, command.aim ?? null, nowTick, dt);
@@ -138,13 +139,18 @@ export function playDueTouch(
       });
       return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
     }
-    if (!release.aim) {
+    if (!release.aimConfirmed) {
       return { ...world, drill: { phase: 'rally', incoming: startHold(incoming, nowTick) } };
     }
   }
 
-  const aim = release.aim ?? (isHoldExpired(incoming, nowTick, dt) ? IDEAL_AIM : null);
-  return aim ? sendBall(world, aim, nowTick, dt, events) : world;
+  // A confirmed aim sends the ball; when time runs out it leaves with the aim so far.
+  if (release.aimConfirmed && release.aim) {
+    return sendBall(world, release.aim, nowTick, dt, events);
+  }
+  return isHoldExpired(incoming, nowTick, dt)
+    ? sendBall(world, release.aim ?? NO_AIM, nowTick, dt, events)
+    : world;
 }
 
 /**
@@ -268,6 +274,29 @@ export function isAwaitingAim(world: WorldState, athleteId: AthleteId): boolean 
     drill.incoming.athleteId === athleteId &&
     !drill.incoming.spent &&
     drill.incoming.release !== null &&
-    drill.incoming.release.aim === null
+    !drill.incoming.release.aimConfirmed
   );
+}
+
+export interface AimTime {
+  /** Game seconds left before the ball leaves with the aim so far. */
+  readonly remainingS: number;
+  /** Game seconds the toucher had to aim, from the commit. */
+  readonly totalS: number;
+}
+
+/** How long `athleteId` still has to aim, for the countdown; null when not aiming. */
+export function aimTimeLeft(world: WorldState, athleteId: AthleteId, dt: number): AimTime | null {
+  if (!isAwaitingAim(world, athleteId) || world.drill.phase !== 'rally') {
+    return null;
+  }
+  const { incoming } = world.drill;
+  const deadline = aimDeadlineTick(incoming, dt);
+  if (deadline === null || !incoming.release) {
+    return null;
+  }
+  return {
+    remainingS: Math.max(0, (deadline - world.tick) * dt),
+    totalS: (deadline - incoming.release.tick) * dt,
+  };
 }

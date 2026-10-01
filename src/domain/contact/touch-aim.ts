@@ -13,6 +13,9 @@ export interface TouchAim {
 
 export const IDEAL_AIM: TouchAim = Object.freeze({ lateral: 0, force: AIM_IDEAL_FORCE });
 
+/** No direction and no force: what a toucher who never aimed puts on the ball. */
+export const NO_AIM: TouchAim = Object.freeze({ lateral: 0, force: 0 });
+
 /** How far the aim is from ideal: 0 when perfect, about 1 at a full-scale miss. */
 export function aimDeviation(aim: TouchAim): number {
   const forceDeviation = (aim.force - AIM_IDEAL_FORCE) / AIM_IDEAL_FORCE;

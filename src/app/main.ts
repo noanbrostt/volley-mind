@@ -8,7 +8,7 @@ import { syncContactCue } from '@render/contact-cue';
 import { createCourtScene } from '@render/court-scene';
 import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
-import { isAwaitingAim, previewTouchPath } from '@simulation/touch-flow';
+import { aimTimeLeft, isAwaitingAim, previewTouchPath } from '@simulation/touch-flow';
 import type { WorldCommand } from '@simulation/world-command';
 import { ATHLETE_A_ID, ATHLETE_B_ID, createWorld } from '@simulation/world-state';
 import { createAimGuide } from '@ui/aim-guide';
@@ -85,6 +85,8 @@ engine.runRenderLoop(() => {
   for (const event of advance.events) {
     feedback.onEvent(event);
   }
+  const aimTime = aimTimeLeft(runner.current, PLAYER_ATHLETE_ID, SIMULATION_STEP_S);
+  aimGuide.setTimeLeft(aimTime ? aimTime.remainingS / aimTime.totalS : null);
   if (!isAwaitingAim(runner.current, PLAYER_ATHLETE_ID)) {
     view.aimPath.hide();
   } else if (activeDrag && previewOutdated) {

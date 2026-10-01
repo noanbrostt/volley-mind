@@ -27,3 +27,18 @@
 .aim-guide__tip {
   fill: rgb(255 255 255 / 90%);
 }
+
+.aim-guide__countdown {
+  fill: none;
+  stroke: #7dff9b;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.aim-guide__countdown--urgent {
+  stroke: #ff8a7a;
+}
+
+.aim-guide__countdown--hidden {
+  visibility: hidden;
+}

@@ -16,8 +16,13 @@ export type WorldCommand =
       readonly aim?: TouchAim;
     }
   | {
-      /** Where the ball goes, for a touch committed without an aim. */
+      /**
+       * Where the ball goes, for a touch committed without an aim. Non-final aims update the
+       * choice while the toucher drags; the final one sends the ball. If time runs out first,
+       * the ball leaves with the latest aim.
+       */
       readonly type: 'aim';
       readonly athleteId: AthleteId;
       readonly aim: TouchAim;
+      readonly final: boolean;
     };

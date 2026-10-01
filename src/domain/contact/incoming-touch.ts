@@ -8,8 +8,10 @@ import { isWithinTimingWindow } from './touch-quality';
 export interface TouchRelease {
   /** Simulation tick of the touch moment: when the toucher committed to it. */
   readonly tick: number;
-  /** Null while the toucher is still choosing where to send the ball. */
+  /** The aim so far: null until the toucher starts aiming, then their latest choice. */
   readonly aim: TouchAim | null;
+  /** True once the aim is final: the ball leaves as soon as it is in the hands. */
+  readonly aimConfirmed: boolean;
 }
 
 /**
@@ -73,15 +75,31 @@ export function releaseTouch(
   if (!isWithinTimingWindow(timingErrorAt(incoming, nowTick, stepSeconds))) {
     return { ...incoming, spent: true };
   }
-  return { ...incoming, release: { tick: nowTick, aim } };
+  return { ...incoming, release: { tick: nowTick, aim, aimConfirmed: aim !== null } };
 }
 
-/** The toucher decides where the ball goes, after having committed to the touch. */
-export function chooseAim(incoming: IncomingTouch, aim: TouchAim): IncomingTouch {
-  if (incoming.spent || !incoming.release || incoming.release.aim) {
+/**
+ * After committing, the toucher aims: each choice replaces the last until one is confirmed.
+ * Once confirmed the aim cannot change.
+ */
+export function chooseAim(incoming: IncomingTouch, aim: TouchAim, confirm: boolean): IncomingTouch {
+  if (incoming.spent || !incoming.release || incoming.release.aimConfirmed) {
     return incoming;
   }
-  return { ...incoming, release: { ...incoming.release, aim } };
+  return { ...incoming, release: { ...incoming.release, aim, aimConfirmed: confirm } };
+}
+
+/**
+ * The tick by which the ball leaves the hands at the latest: the hold limit counted from
+ * contact (or from a late commit). Null before the toucher commits.
+ */
+export function aimDeadlineTick(incoming: IncomingTouch, stepSeconds: number): number | null {
+  if (!incoming.release) {
+    return null;
+  }
+  const holdStart =
+    incoming.holdStartTick ?? Math.max(Math.round(incoming.contactTick), incoming.release.tick);
+  return holdStart + AIM_HOLD_MAX_S / stepSeconds;
 }
 
 /**
@@ -94,12 +112,12 @@ export function isTouchDue(incoming: IncomingTouch, nowTick: number): boolean {
   );
 }
 
-/** At contact without an aim, the ball rests in the hands while the toucher aims. */
+/** At contact without a confirmed aim, the ball rests in the hands while the toucher aims. */
 export function startHold(incoming: IncomingTouch, nowTick: number): IncomingTouch {
   return incoming.holdStartTick === null ? { ...incoming, holdStartTick: nowTick } : incoming;
 }
 
-/** The hands cannot keep the ball forever: past the limit it leaves with the ideal aim. */
+/** The hands cannot keep the ball forever: past the limit it leaves with the aim so far. */
 export function isHoldExpired(
   incoming: IncomingTouch,
   nowTick: number,

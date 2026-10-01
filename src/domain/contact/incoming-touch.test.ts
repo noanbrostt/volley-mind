@@ -2,6 +2,7 @@ import { AIM_HOLD_MAX_S, TOUCH_TIMING_WINDOW_S } from '@config/touch';
 import { Vec3 } from '@core/vec3';
 import { describe, expect, it } from 'vitest';
 import {
+  aimDeadlineTick,
   chooseAim,
   createIncomingTouch,
   hasWindowClosed,
@@ -40,7 +41,7 @@ describe('incoming touch', () => {
 
   it('accepts one release inside the window and ignores the rest', () => {
     const released = releaseTouch(incoming, IDEAL_AIM, 155, DT);
-    expect(released.release).toEqual({ tick: 155, aim: IDEAL_AIM });
+    expect(released.release).toEqual({ tick: 155, aim: IDEAL_AIM, aimConfirmed: true });
     expect(releaseTouch(released, { lateral: 1, force: 1 }, 158, DT)).toBe(released);
   });
 
@@ -67,13 +68,33 @@ describe('incoming touch', () => {
     expect(hasWindowClosed(released, closingTick, DT)).toBe(false);
   });
 
-  it('commits without an aim, then takes the aim once', () => {
+  it('commits without an aim, updates drafts, and locks the aim once confirmed', () => {
     const committed = releaseTouch(incoming, null, 158, DT);
-    expect(committed.release).toEqual({ tick: 158, aim: null });
-    const aimed = chooseAim(committed, IDEAL_AIM);
-    expect(aimed.release?.aim).toEqual(IDEAL_AIM);
-    expect(chooseAim(aimed, { lateral: 1, force: 1 })).toBe(aimed);
-    expect(chooseAim(incoming, IDEAL_AIM)).toBe(incoming);
+    expect(committed.release).toEqual({ tick: 158, aim: null, aimConfirmed: false });
+    const draft = chooseAim(committed, { lateral: 0.3, force: 0.4 }, false);
+    expect(draft.release?.aim).toEqual({ lateral: 0.3, force: 0.4 });
+    const confirmed = chooseAim(draft, IDEAL_AIM, true);
+    expect(confirmed.release).toEqual({ tick: 158, aim: IDEAL_AIM, aimConfirmed: true });
+    expect(chooseAim(confirmed, { lateral: 1, force: 1 }, true)).toBe(confirmed);
+    expect(chooseAim(incoming, IDEAL_AIM, true)).toBe(incoming);
+  });
+
+  it('commits with the aim at once when it is already known (the AI)', () => {
+    const aiTouch = releaseTouch(incoming, IDEAL_AIM, 158, DT);
+    expect(aiTouch.release?.aimConfirmed).toBe(true);
+  });
+
+  it('knows the aiming deadline: hold limit after contact, or after a late commit', () => {
+    const limitTicks = AIM_HOLD_MAX_S / DT;
+    expect(aimDeadlineTick(incoming, DT)).toBeNull();
+    expect(aimDeadlineTick(releaseTouch(incoming, null, 155, DT), DT)).toBeCloseTo(
+      160 + limitTicks,
+      9,
+    );
+    expect(aimDeadlineTick(releaseTouch(incoming, null, 165, DT), DT)).toBeCloseTo(
+      165 + limitTicks,
+      9,
+    );
   });
 
   it('holds the ball from contact until the hold limit', () => {

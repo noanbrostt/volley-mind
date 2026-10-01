@@ -13,6 +13,7 @@ import {
 import { SIMULATION_STEP_S } from '@config/simulation';
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
+import { OVERLAY_RENDERING_GROUP } from './overlay-rendering-group';
 
 const CUE_TESSELLATION = 32;
 
@@ -33,6 +34,9 @@ export function createContactCue(scene: Scene): Mesh {
   material.disableLighting = true;
   ring.material = material;
   ring.isPickable = false;
+  // Drawn after the scene with depth cleared, so the athlete's body never hides it (bumps
+  // are met at the waist, right behind the body from the camera's point of view).
+  ring.renderingGroupId = OVERLAY_RENDERING_GROUP;
   ring.setEnabled(false);
   return ring;
 }

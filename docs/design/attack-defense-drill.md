@@ -18,10 +18,11 @@ O jogador humano controla um atleta (A) e a IA controla o outro (B).
 
 Controle (decidido pelo Noan depois de jogar: tempo e direção separados), com um polegar:
 
-- **Tempo:** o toque na bola acontece quando o jogador **encosta** o dedo na tela. Um **anel** no ponto de contato encolhe até o tamanho da bola no instante ideal (ajuda visual, não regra).
-- **Câmera lenta:** depois de encostar, o jogo fica em câmera lenta enquanto o jogador mira. Quando a bola chega às mãos, ela espera a mira, mas não para sempre: esgotado o limite, sai com a mira ideal.
+- **Tempo:** o toque na bola acontece quando o jogador **encosta** o dedo na tela. Um **anel** no ponto de contato encolhe até o tamanho da bola no instante ideal (ajuda visual, não regra). O anel aparece por cima de tudo, para o corpo do atleta não escondê-lo.
+- **Câmera lenta:** depois de encostar, o jogo fica em câmera lenta enquanto o jogador mira. Quando a bola chega às mãos, ela espera a mira, mas não para sempre. Um **anel de contagem regressiva** em volta do dedo mostra quanto tempo resta; esgotado o tempo, a bola sai com a mira que o jogador tinha naquele momento.
 - **Direção e força:** arrastando o dedo aparece a **linha de auxílio**, o arco que a bola vai fazer. Arrastar para cima aponta para o colega, inclinar mira para os lados e o comprimento do arrasto doseia a força. A linha mostra o caminho ideal da mira escolhida; a imprecisão do toque (tempo, posição, atributos) ainda espalha a bola.
 - **Soltar** o dedo confirma a mira.
+- **Sem mira de graça:** só tocar, sem arrastar, não acerta sozinho. Sem arrasto, a bola sai quase sem força.
 - Depois de cada toque aparece um retorno curto: técnica e tempo ("Toque · Perfeito!", "Manchete · Atrasado") ou o erro ("Cedo demais", "Não alcançou").
 - O atleta **se desloca sozinho** (com seus atributos de velocidade e leitura) e escolhe a **técnica** pela regra deste modo (toque com prioridade; manchete quando a bola vem ruim).
 - Controlar os passos e o peixinho com o outro polegar pode entrar depois, no 6x6.
