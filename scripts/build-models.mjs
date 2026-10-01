@@ -17,6 +17,7 @@ import {
   unpartition,
 } from '@gltf-transform/functions';
 import sharp from 'sharp';
+import { dressAthlete } from './dress-athlete.mjs';
 
 const PACKS = 'asset-packs';
 const OUTPUT = 'public/models';
@@ -24,14 +25,25 @@ const BODY_DIR = `${PACKS}/universal-base-characters/Base Characters/Godot - UE`
 const HAIR_DIR = `${PACKS}/universal-base-characters/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)`;
 const ANIMATION_LIBRARY = `${PACKS}/universal-animation-library/Godot/AnimationLibrary_Godot_Standard.glb`;
 
-/** Athlete A is male and B is female (Noan's choice). */
+const BODY_MATERIAL_PREFIX = 'MI_Superhero';
+
+/**
+ * Athlete A is male and B is female (Noan's choice). Hair colors are linear RGBA, multiplied
+ * over the pack's grayscale hair texture.
+ */
 const ATHLETES = [
   {
     output: 'athlete-male.glb',
     body: 'Superhero_Male_FullBody.gltf',
     hair: 'Hair_SimpleParted.gltf',
+    hairColor: [0.06, 0.035, 0.02, 1],
   },
-  { output: 'athlete-female.glb', body: 'Superhero_Female_FullBody.gltf', hair: 'Hair_Buns.gltf' },
+  {
+    output: 'athlete-female.glb',
+    body: 'Superhero_Female_FullBody.gltf',
+    hair: 'Hair_Buns.gltf',
+    hairColor: [0.035, 0.02, 0.012, 1],
+  },
 ];
 
 /** Generic clips the volleyball gestures build on; the gestures themselves are code. */
@@ -74,10 +86,11 @@ async function requirePacks() {
   }
 }
 
-async function buildAthlete({ output, body, hair }) {
+async function buildAthlete({ output, body, hair, hairColor }) {
   const document = await readGltf(path.join(BODY_DIR, body));
   const hairDocument = await readGltf(path.join(HAIR_DIR, hair));
   attachHair(document, hairDocument);
+  dressAthlete(document, { bodyMaterialPrefix: BODY_MATERIAL_PREFIX, hairColor });
   await document.transform(
     textureCompress({
       encoder: sharp,

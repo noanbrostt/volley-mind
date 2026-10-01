@@ -7,6 +7,8 @@ export const ATHLETE_MODEL_FILES: readonly string[] = ['athlete-male.glb', 'athl
 export const ATHLETE_ANIMATIONS_FILE = 'athlete-animations.glb';
 /** Folder of the model files, relative to the app's base URL. */
 export const ATHLETE_MODELS_FOLDER = 'models/';
+/** Uniform material tinted with each athlete's color (named by scripts/dress-athlete.mjs). */
+export const JERSEY_MATERIAL_NAME = 'Jersey';
 
 /**
  * Locomotion clips, slowest first, with the ground speed each one shows when played at
