@@ -4,7 +4,7 @@ Jogo 3D de vôlei que roda no navegador, pensado primeiro para o celular (tela n
 
 O objetivo atual é o **aquecimento de ataque e defesa 1x1**: dois atletas, uma bola, sem rede e sem adversário. No longo prazo, o 6x6 com posições, rodízio e modo carreira.
 
-Por enquanto existe a fundação: uma bola com física própria quicando na quadra. Tocar na tela relança a bola.
+O aquecimento já é jogável: você controla o atleta A e a IA controla o B. Encoste o dedo quando o anel encolher até a bola (tempo do toque), arraste para mirar vendo o arco e solte para confirmar. O ciclo ataque → defesa → levantamento segue sozinho, com manchete, caixinha e peixinho escolhidos pelas regras do aquecimento.
 
 **Jogar:** https://noanbrostt.github.io/volley-mind/ (publicado automaticamente a cada push na `main`, depois que tipos, lint e testes passam).
 
