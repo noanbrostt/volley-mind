@@ -18,10 +18,11 @@ O jogador humano controla um atleta (A) e a IA controla o outro (B).
 
 Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
 
-- **Tempo:** o jogador encosta o dedo quando a bola chega. A precisão do tempo pesa na qualidade do toque.
-- **Direção e força:** arrastando o dedo, a direção é para onde o corpo aponta e o comprimento do arrasto doseia a força.
+- **Direção e força:** o jogador encosta o dedo e arrasta para mirar. A direção é para onde o corpo aponta e o comprimento do arrasto doseia a força.
+- **Tempo:** o toque na bola acontece quando o jogador **solta** o dedo. A precisão desse momento pesa na qualidade do toque.
 - O atleta **se desloca sozinho** (com seus atributos de velocidade e leitura) e escolhe a **técnica** pela regra deste modo (toque com prioridade; manchete quando a bola vem ruim).
 - Controlar os passos e o peixinho com o outro polegar pode entrar depois, no 6x6.
+- **Câmera:** atrás do atleta do jogador, por cima do ombro, olhando para o colega.
 
 ## Posicionamento
 
@@ -48,6 +49,20 @@ Cada atleta repete o ciclo **ataque → levantamento → defesa**, e os toques a
 - **Defesa:** toque ou manchete. O toque tem prioridade; a manchete é mais situacional, para quando a bola vem ruim.
 - **Levantamento:** a mesma regra. Toque tem prioridade; manchete quando a bola vem ruim.
 - **Ataque:** com bola boa, cortada. Com bola ruim, caixinha, mas uma caixinha que vai **até o colega**. Aqui nunca se mira no chão.
+
+Uma bola é **ruim** quando:
+
+- chega **baixa** para a técnica;
+- chega **longe do corpo**;
+- chega **fora do tempo** (o atleta não conseguiu se posicionar a tempo).
+
+Bola forte, por si só, **não** é bola ruim.
+
+Pontos de contato de cada técnica neste modo:
+
+- **Toque:** mãos em concha; a bola é tocada um pouco acima da testa.
+- **Manchete:** antebraços unidos; a bola é tocada entre a cintura e o quadril.
+- **Cortada:** braço esticado para cima, levemente à frente e do lado do braço dominante (ver "O levantamento").
 
 ## O ataque
 

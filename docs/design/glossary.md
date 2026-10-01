@@ -80,5 +80,12 @@ Para que serve o toque.
 | Bola | `ball` |
 | Quique (bola batendo no chão) | `bounce` |
 | Ponto de queda | `landing` |
+| Contato (qualquer toque na bola, de qualquer técnica) | `touch` |
+| Qualidade do toque | `touch-quality` |
+| Ponto de contato | `contact-point` |
+| Posição base | `base-position` |
+| Braço dominante | `dominant-arm` |
+| Auto-lançamento (jogar a bola para cima para si mesmo) | `self-toss` |
+| Recuperação (tempo para voltar à posição base) | `recovery` |
 | Quadra | `court` |
 | Areia | `sand` |
