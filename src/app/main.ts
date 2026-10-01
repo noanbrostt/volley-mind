@@ -5,8 +5,8 @@ import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
 import type { WorldCommand } from '@simulation/world-command';
 import { createWorld } from '@simulation/world-state';
-import type { FpsCounter } from '@ui/fps-counter';
 import './app.css';
+import type { DevTools } from './dev-tools';
 
 const MILLISECONDS_PER_SECOND = 1000;
 
@@ -24,10 +24,10 @@ const commands: WorldCommand[] = [];
 listenForLaunch(canvas, (command) => commands.push(command));
 
 // Dev-only tools load through dynamic import so production bundles never contain them.
-let fpsCounter: FpsCounter | null = null;
+let devTools: DevTools | null = null;
 if (import.meta.env.DEV) {
-  void import('@ui/fps-counter').then(({ createFpsCounter }) => {
-    fpsCounter = createFpsCounter(document.body);
+  void import('./dev-tools').then(({ startDevTools }) => {
+    devTools = startDevTools(view.scene);
   });
 }
 
@@ -39,5 +39,5 @@ engine.runRenderLoop(() => {
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   view.scene.render();
-  fpsCounter?.update(engine.getFps(), frameSeconds);
+  devTools?.onFrame(engine.getFps(), frameSeconds);
 });

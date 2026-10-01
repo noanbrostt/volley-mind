@@ -19,6 +19,7 @@
     "@babylonjs/core": "9.29.0"
   },
   "devDependencies": {
+    "@babylonjs/inspector": "9.29.0",
     "@biomejs/biome": "2.5.15",
     "typescript": "7.0.2",
     "vite": "8.3.2",
