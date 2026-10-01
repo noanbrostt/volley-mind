@@ -105,9 +105,10 @@ Pontos de contato de cada técnica neste modo:
 
 - O intuito principal do modo é **ensinar a mecânica do jogo** e evoluir levemente os atributos.
 - O treino evolui atributos numa velocidade melhor que o resto do jogo (ver `athletes.md`).
-- Ideia em avaliação: contar um **combo** (sequência de toques sem quebrar o loop) e gravar o recorde.
+- **Combo:** cada toque, de qualquer um dos dois atletas, enquanto o loop não quebra, soma 1. Quando o loop quebra, o combo volta a zero.
+- **Recorde:** a maior sequência já feita, salva no aparelho e mostrada no menu.
+- **Evolução:** neste modo, só o atleta do jogador evolui (o colega da IA fica como está). Cada toque do jogador dá experiência aos atributos da ação e da técnica usadas (ver `athletes.md`).
 
 ## Em aberto
 
-- Combo e recorde: confirmar se entram e como contam.
 - Caixinha com uma bola que nem chega à altura da cortada: por enquanto o código a toca na altura do toque. Confirmar com o Noan.

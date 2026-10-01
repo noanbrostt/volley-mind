@@ -46,6 +46,14 @@ Treinar um atributo também melhora os vinculados, numa medida menor:
 - Quanto melhor o atleta já é num atributo, mais devagar ele evolui.
 - Mudar de posição mantém tudo o que foi evoluído.
 
+### Primeira versão (simples)
+
+- Cada toque dá **experiência** aos atributos da **ação** e da **técnica** usadas, em proporção à qualidade do toque.
+- O ganho é mais lento quanto maior o atributo.
+- Os atributos **vinculados** (ver acima) ganham uma parte menor.
+- A evolução fica salva no aparelho.
+- Os números (quanto cada toque rende) são calibrados jogando.
+
 ## Em aberto
 
 - **Estado durante a partida** (cansaço, confiança, dia bom ou ruim): desejado, mas o modelo não está definido. Proposta em avaliação: começar só com confiança (sequências de acertos e erros dão um pequeno bônus ou queda, visível na tela) e adicionar cansaço depois, ligado à resistência.

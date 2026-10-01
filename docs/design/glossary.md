@@ -87,5 +87,10 @@ Para que serve o toque.
 | Braço dominante | `dominant-arm` |
 | Auto-lançamento (jogar a bola para cima para si mesmo) | `self-toss` |
 | Recuperação (tempo para voltar à posição base) | `recovery` |
+| Combo (toques seguidos sem o loop quebrar) | `combo` |
+| Recorde | `record` |
+| Experiência | `experience` |
+| Evolução | `progression` |
+| Ficha do atleta | `athlete-sheet` |
 | Quadra | `court` |
 | Areia | `sand` |
