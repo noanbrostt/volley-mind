@@ -40,6 +40,7 @@ Treinar um atributo também melhora os vinculados, numa medida menor:
 ## Evolução
 
 - É possível ficar bom em tudo. A posição atual **não** limita o aprendizado.
+- Tudo o que o atleta faz evolui atributos, mas o **treino** evolui numa velocidade melhor; o resto evolui mais devagar.
 - Treinar um atributo que não é o da posição é permitido, só é menos útil em jogo.
 - Atributos **não decaem** com o tempo.
 - Quanto melhor o atleta já é num atributo, mais devagar ele evolui.
