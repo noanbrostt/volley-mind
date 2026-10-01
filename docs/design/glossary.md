@@ -77,3 +77,7 @@ Para que serve o toque.
 | Atleta | `athlete` |
 | Rodízio | `rotation` |
 | Pedir a bola | `call-ball` |
+| Bola | `ball` |
+| Quique (bola batendo no chão) | `bounce` |
+| Ponto de queda | `landing` |
+| Areia | `sand` |
