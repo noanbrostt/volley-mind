@@ -10,14 +10,17 @@ export const ATHLETE_DEFAULT_ATTRIBUTE = 60;
 export const ATHLETE_MIN_SPEED_MPS = 2;
 export const ATHLETE_MAX_SPEED_MPS = 4;
 
+/** How quickly an athlete speeds up and brakes, in m/s². Short volleyball steps start sharp. */
+export const ATHLETE_ACCELERATION_MPS2 = 10;
+
 /** How far "one or two steps" reach from the base position, in m. */
 export const ATHLETE_STEP_REACH_M = 1.2;
 
 // Contact points per technique, relative to the athlete: heights as fractions of the
 // athlete's height, offsets in m along the facing direction and toward the dominant arm.
 
-/** Overhead (toque): hands in a cup, a little above the forehead. */
-export const OVERHEAD_CONTACT_HEIGHT_RATIO = 1.03;
+/** Overhead (toque): hands in a cup, slightly above the head (Noan: not right on it). */
+export const OVERHEAD_CONTACT_HEIGHT_RATIO = 1.08;
 export const OVERHEAD_CONTACT_FORWARD_M = 0.2;
 
 /** Bump (manchete): forearms together, between the waist and the hips. */

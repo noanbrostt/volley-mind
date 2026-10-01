@@ -43,7 +43,7 @@ export function touchQuality(
   execution: TouchExecution,
 ): number {
   const timing = clamp01(1 - (execution.timingErrorS / TOUCH_TIMING_WINDOW_S) ** 2);
-  const position = clamp01(1 - execution.positionErrorM / TOUCH_POSITION_TOLERANCE_M);
+  const position = clamp01(1 - (execution.positionErrorM / TOUCH_POSITION_TOLERANCE_M) ** 2);
   const aim = clamp01(1 - aimDeviation(execution.aim) * AIM_QUALITY_PENALTY);
   const skill =
     TOUCH_SKILL_FLOOR + (1 - TOUCH_SKILL_FLOOR) * skillFor(attributes, action, technique);

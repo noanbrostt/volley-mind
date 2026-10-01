@@ -13,6 +13,8 @@ export interface AthleteState {
   readonly id: AthleteId;
   /** Point between the feet, on the floor, in m. */
   readonly position: Vec3;
+  /** Along the floor, in m/s: athletes speed up and brake instead of jumping to full speed. */
+  readonly velocity: Vec3;
   /** Yaw around the up axis, in rad. 0 looks toward +z. */
   readonly facing: number;
   /** Where the athlete stands when nothing is happening, in m. */
@@ -33,6 +35,7 @@ export function createAthlete({ id, basePosition, facing }: NewAthlete): Athlete
   return {
     id,
     position: basePosition,
+    velocity: Vec3.ZERO,
     facing,
     basePosition,
     heightM: ATHLETE_DEFAULT_HEIGHT_M,

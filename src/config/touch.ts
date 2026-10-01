@@ -32,7 +32,7 @@ export const AIM_FORCE_SPAN = 0.8;
 // --- Error from imperfect quality (scaled by 1 − quality) ---
 
 /** Radius of the random target miss at quality 0, in m. */
-export const TOUCH_MAX_TARGET_ERROR_M = 2.5;
+export const TOUCH_MAX_TARGET_ERROR_M = 1.6;
 
 /** Random change of the arc height at quality 0, ± in m. */
 export const TOUCH_MAX_RISE_ERROR_M = 1.2;

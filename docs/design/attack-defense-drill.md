@@ -30,6 +30,8 @@ Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
 - Cada um tem uma **posição base**. Se os fundamentos saem bem, o atleta praticamente não sai do lugar: o movimento é do corpo, alternando entre os fundamentos.
 - Todas as ações buscam colocar a bola onde o colega **não precise andar**. Se alguém está andando para continuar o ataque ou a defesa, tudo bem, mas é porque alguém errou um pouco.
 - Se uma bola chega um pouco fora, o atleta dá **um ou dois passos** para alcançá-la e depois **volta para a posição base**.
+- O atleta só se movimenta quando a bola **começa a vir na direção dele**. Na prática, um se movimenta por vez: quem acabou de tocar fica onde está até a bola voltar para ele.
+- O movimento é suave: o atleta acelera e freia, não sai nem para de uma vez.
 - Se a bola chega mais longe que isso, o atleta pode fazer um **peixinho**. Depois do peixinho, o **tempo de recuperação** para voltar à posição base é maior.
 
 ## Sequência
@@ -60,7 +62,7 @@ Bola forte, por si só, **não** é bola ruim.
 
 Pontos de contato de cada técnica neste modo:
 
-- **Toque:** mãos em concha; a bola é tocada um pouco acima da testa.
+- **Toque:** mãos em concha; a bola é tocada levemente acima da cabeça (não colada nela).
 - **Manchete:** antebraços unidos; a bola é tocada entre a cintura e o quadril.
 - **Cortada:** braço esticado para cima, levemente à frente e do lado do braço dominante (ver "O levantamento").
 - **Caixinha:** bem parecida com a cortada em posição de contato.

@@ -1,6 +1,6 @@
 import { DRILL_RESTART_DELAY_S } from '@config/attack-defense-drill';
 import type { AthleteState } from '@domain/athlete/athlete-state';
-import { moveAthleteToward } from '@domain/athlete/move-athlete';
+import { moveAthleteToward, stoppingPoint } from '@domain/athlete/move-athlete';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import { type BallBounce, stepBall } from '@domain/ball/step-ball';
 import { selfToss } from '@domain/contact/self-toss';
@@ -97,11 +97,17 @@ function breakLoop(
   };
 }
 
-/** The next toucher heads to where they will meet the ball; everyone else returns to base. */
+/**
+ * Athletes only move when the ball starts coming toward them (Noan), so one moves at a time:
+ * the next toucher heads for the ball, the others stay where they are. Between rallies
+ * everyone walks back to base.
+ */
 function footwork(world: WorldState, athlete: AthleteState, dt: number): AthleteState {
-  const incoming = world.drill.phase === 'rally' ? world.drill.incoming : null;
-  const plan =
-    incoming && !incoming.spent && incoming.athleteId === athlete.id ? incoming.plan : null;
-  const target = plan ? reachableSpot(athlete, plan.standPosition) : athlete.basePosition;
+  if (world.drill.phase === 'broken') {
+    return moveAthleteToward(athlete, athlete.basePosition, dt);
+  }
+  const { incoming } = world.drill;
+  const plan = !incoming.spent && incoming.athleteId === athlete.id ? incoming.plan : null;
+  const target = plan ? reachableSpot(athlete, plan.standPosition) : stoppingPoint(athlete);
   return moveAthleteToward(athlete, target, dt);
 }

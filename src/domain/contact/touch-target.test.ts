@@ -27,10 +27,16 @@ describe('touchTargetFor', () => {
     expect(touchTargetFor('attack', 'roll-shot', receiver).trajectory.kind).toBe('arc');
   });
 
-  it('always aims at the receiver’s base, so a good touch never makes them move', () => {
+  it('aims where the receiver is standing, so a good touch never makes them walk', () => {
     const wandered: AthleteState = { ...receiver, position: Vec3.create(1.5, 0, 2) };
     expect(touchTargetFor('set', 'overhead', wandered).point).toEqual(
-      touchTargetFor('set', 'overhead', receiver).point,
+      contactPoint(wandered, 'spike'),
     );
+  });
+
+  it('aims where a receiver still braking will come to rest', () => {
+    const braking: AthleteState = { ...receiver, velocity: Vec3.create(2, 0, 0) };
+    const target = touchTargetFor('dig', 'bump', braking).point;
+    expect(target.x).toBeGreaterThan(contactPoint(receiver, 'overhead').x);
   });
 });

@@ -2,7 +2,7 @@ import { ATHLETE_STEP_REACH_M } from '@config/athlete';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
-import { maxSpeedOf } from '@domain/athlete/move-athlete';
+import { timeToReach } from '@domain/athlete/move-athlete';
 import type { BallPhysics } from '@domain/ball/ball-physics';
 import type { BallState } from '@domain/ball/ball-state';
 import { type BallCrossing, predictCrossing } from '@domain/ball/predict-crossing';
@@ -112,7 +112,7 @@ function assess(
   if (Vec3.distance(standPosition, athlete.basePosition) > ATHLETE_STEP_REACH_M) {
     reasons.push('far');
   }
-  const travelSeconds = Vec3.distance(standPosition, athlete.position) / maxSpeedOf(athlete);
+  const travelSeconds = timeToReach(athlete, Vec3.distance(standPosition, athlete.position));
   if (travelSeconds > contact.secondsFromNow) {
     reasons.push('late');
   }

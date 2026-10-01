@@ -7,6 +7,7 @@ import {
 import type { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
+import { stoppingPoint } from '@domain/athlete/move-athlete';
 import type { Action } from './action';
 import type { Technique } from './technique';
 
@@ -25,32 +26,33 @@ export interface TouchTarget {
 }
 
 /**
- * The ideal destination of a touch in the drill: always on the receiver standing on their
- * base position, so nobody has to move when the touch is good.
+ * The ideal destination of a touch in the drill: on the receiver where they will be standing,
+ * so they do not have to move (Noan: every action looks for the spot where the partner does
+ * not need to walk).
  */
 export function touchTargetFor(
   action: Action,
   technique: Technique,
   receiver: AthleteState,
 ): TouchTarget {
-  const atBase: AthleteState = { ...receiver, position: receiver.basePosition };
+  const standing: AthleteState = { ...receiver, position: stoppingPoint(receiver) };
   switch (action) {
     case 'set':
       // Above the attacker, to hit with the arm stretched up.
       return {
-        point: contactPoint(atBase, 'spike'),
+        point: contactPoint(standing, 'spike'),
         trajectory: { kind: 'arc', rise: SET_RISE_M },
       };
     case 'dig':
       // High, to the setter's hands.
       return {
-        point: contactPoint(atBase, 'overhead'),
+        point: contactPoint(standing, 'overhead'),
         trajectory: { kind: 'arc', rise: DIG_RISE_M },
       };
     case 'attack':
       // Aimed at the defender's body, at bump height.
       return {
-        point: contactPoint(atBase, 'bump'),
+        point: contactPoint(standing, 'bump'),
         trajectory:
           technique === 'roll-shot'
             ? { kind: 'arc', rise: ROLL_SHOT_RISE_M }

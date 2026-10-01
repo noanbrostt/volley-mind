@@ -20,7 +20,7 @@ Um toque é resolvido em `src/domain/contact/`, em etapas puras:
 
 1. **Plano** (`plan-touch`): prevê onde a bola cruza a altura de contato de cada técnica e escolhe a técnica pela regra do modo. Marca a bola como ruim quando ela chega baixa, longe ou fora do tempo, e calcula onde o atleta precisa pisar.
 2. **Qualidade** (`touch-quality`): o produto de tempo, posição e mira, ponderado pela habilidade (atributo da ação junto com o da técnica, conforme `athletes.md`). Bola ruim reduz a qualidade.
-3. **Alvo** (`touch-target`): o destino ideal fica sempre no receptor **parado na posição base**, mais o tipo de trajetória (arco de certa altura ou bola forte a certa velocidade).
+3. **Alvo** (`touch-target`): o destino ideal fica no receptor **onde ele vai estar parado**, para ele não precisar andar (regra do Noan), mais o tipo de trajetória (arco de certa altura ou bola forte a certa velocidade).
 4. **Resolução** (`resolve-touch`):
    - a mira desloca o alvo;
    - o erro, sorteado com o RNG com semente em escala `(1 − qualidade)`, espalha o alvo e a trajetória;

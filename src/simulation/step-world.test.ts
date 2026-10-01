@@ -127,6 +127,25 @@ describe('stepWorld: the attack-defense drill', () => {
     expect(eventsOf(events, 'loop-restarted').length).toBeGreaterThan(1);
   });
 
+  it('moves one athlete at a time: only the one the ball is coming to speeds up', () => {
+    let world = drillWorld({ attribute: 40, seed: 5 });
+    for (let i = 0; i < Math.round(40 / DT); i++) {
+      const next = stepWorld(world, [], DT).world;
+      if (world.drill.phase === 'rally' && next.drill.phase === 'rally') {
+        const comingTo = next.drill.incoming.athleteId;
+        next.athletes.forEach((athlete, index) => {
+          const before = world.athletes[index];
+          if (athlete.id !== comingTo && before) {
+            expect(Vec3.length(athlete.velocity)).toBeLessThanOrEqual(
+              Vec3.length(before.velocity) + 1e-9,
+            );
+          }
+        });
+      }
+      world = next;
+    }
+  });
+
   it('is deterministic for the same seed', () => {
     const first = run(drillWorld({ seed: 7 }), 30);
     const second = run(drillWorld({ seed: 7 }), 30);
