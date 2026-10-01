@@ -63,6 +63,7 @@ Pontos de contato de cada técnica neste modo:
 - **Toque:** mãos em concha; a bola é tocada um pouco acima da testa.
 - **Manchete:** antebraços unidos; a bola é tocada entre a cintura e o quadril.
 - **Cortada:** braço esticado para cima, levemente à frente e do lado do braço dominante (ver "O levantamento").
+- **Caixinha:** bem parecida com a cortada em posição de contato.
 
 ## O ataque
 
@@ -94,3 +95,4 @@ Pontos de contato de cada técnica neste modo:
 ## Em aberto
 
 - Combo e recorde: confirmar se entram e como contam.
+- Caixinha com uma bola que nem chega à altura da cortada: por enquanto o código a toca na altura do toque. Confirmar com o Noan.

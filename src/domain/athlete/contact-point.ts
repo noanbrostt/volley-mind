@@ -18,6 +18,12 @@ interface ContactOffset {
   readonly dominantSide: number;
 }
 
+const SPIKE_OFFSET: ContactOffset = {
+  heightRatio: SPIKE_CONTACT_HEIGHT_RATIO,
+  forward: SPIKE_CONTACT_FORWARD_M,
+  dominantSide: SPIKE_CONTACT_DOMINANT_SIDE_M,
+};
+
 const CONTACT_OFFSETS: Readonly<Record<Technique, ContactOffset>> = {
   overhead: {
     heightRatio: OVERHEAD_CONTACT_HEIGHT_RATIO,
@@ -29,11 +35,9 @@ const CONTACT_OFFSETS: Readonly<Record<Technique, ContactOffset>> = {
     forward: BUMP_CONTACT_FORWARD_M,
     dominantSide: 0,
   },
-  spike: {
-    heightRatio: SPIKE_CONTACT_HEIGHT_RATIO,
-    forward: SPIKE_CONTACT_FORWARD_M,
-    dominantSide: SPIKE_CONTACT_DOMINANT_SIDE_M,
-  },
+  spike: SPIKE_OFFSET,
+  // Noan: the roll shot is taken from much the same position as the spike.
+  'roll-shot': SPIKE_OFFSET,
 };
 
 /** Where, in the world, the athlete's body meets the ball with this technique. */

@@ -1,4 +1,4 @@
-import { LANDING_PREDICTION_HORIZON_S } from '@config/landing-prediction';
+import { BALL_PREDICTION_HORIZON_S } from '@config/ball-prediction';
 import type { Vec3 } from '@core/vec3';
 import type { BallPhysics } from './ball-physics';
 import { type BallState, isBallResting } from './ball-state';
@@ -20,7 +20,7 @@ export function predictLanding(
   ball: BallState,
   physics: BallPhysics,
   stepSeconds: number,
-  horizonSeconds: number = LANDING_PREDICTION_HORIZON_S,
+  horizonSeconds: number = BALL_PREDICTION_HORIZON_S,
 ): LandingPrediction | null {
   if (isBallResting(ball, physics.radius)) {
     return null;
