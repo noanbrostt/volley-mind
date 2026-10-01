@@ -12,14 +12,19 @@ import {
 } from '@config/court-scene';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
+import { type AthleteAnimator, createAthleteAnimator } from './athlete-model/athlete-animator';
+import type { AthleteModel } from './athlete-model/load-athlete-models';
 
 /**
  * One view per athlete: the root stands at the feet and turns with the athlete; the pose
- * node under it tilts the body and head down to lie on the floor after a dive.
+ * node under it tilts the body down to lie on the floor after a dive. A simple capsule
+ * stands in until the 3D model has loaded.
  */
 export interface AthleteView {
   readonly root: TransformNode;
   readonly pose: TransformNode;
+  readonly placeholder: TransformNode;
+  animator: AthleteAnimator | null;
 }
 
 export type AthleteViews = readonly AthleteView[];
@@ -69,10 +74,51 @@ export function syncAthleteViews(
   }
 }
 
+/**
+ * Swaps the capsule for the 3D model, scaled to the athlete's height. Views and models are
+ * both in world order.
+ */
+export function dressAthleteViews(
+  views: AthleteViews,
+  models: readonly AthleteModel[],
+  athletes: readonly AthleteState[],
+): void {
+  for (let i = 0; i < views.length; i++) {
+    const view = views[i];
+    const model = models[i];
+    const athlete = athletes[i];
+    if (!view || !model || !athlete) {
+      continue;
+    }
+    model.root.parent = view.pose;
+    // Scaling keeps the sign of the loader's handedness flip.
+    model.root.scaling.scaleInPlace(athlete.heightM / model.heightM);
+    view.placeholder.setEnabled(false);
+    view.animator = createAthleteAnimator(model.clips);
+  }
+}
+
+/** Plays each model's clips for what its athlete is doing now. */
+export function animateAthleteViews(
+  views: AthleteViews,
+  current: WorldState,
+  gameSeconds: number,
+  timeScale: number,
+): void {
+  for (let i = 0; i < views.length; i++) {
+    const athlete = current.athletes[i];
+    if (athlete) {
+      views[i]?.animator?.update(athlete, gameSeconds, timeScale);
+    }
+  }
+}
+
 function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string): AthleteView {
   const root = new TransformNode(`athlete-${athlete.id}`, scene);
   const pose = new TransformNode(`athlete-${athlete.id}-pose`, scene);
   pose.parent = root;
+  const placeholder = new TransformNode(`athlete-${athlete.id}-placeholder`, scene);
+  placeholder.parent = pose;
   const material = new StandardMaterial(`athlete-${athlete.id}-material`, scene);
   material.diffuseColor = Color3.FromHexString(colorHex);
   material.specularColor = Color3.Black();
@@ -85,7 +131,7 @@ function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string
   );
   body.position.y = bodyHeight / 2;
   body.material = material;
-  body.parent = pose;
+  body.parent = placeholder;
 
   const head = CreateSphere(
     `athlete-${athlete.id}-head`,
@@ -94,9 +140,9 @@ function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string
   );
   head.position.y = bodyHeight + ATHLETE_HEAD_RADIUS_M;
   head.material = material;
-  head.parent = pose;
+  head.parent = placeholder;
 
   root.position.set(athlete.position.x, 0, athlete.position.z);
   root.rotation.y = athlete.facing;
-  return { root, pose };
+  return { root, pose, placeholder, animator: null };
 }

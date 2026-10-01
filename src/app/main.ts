@@ -6,7 +6,8 @@ import {
 } from '@config/touch-control';
 import { aimFromDrag, idealDragLength } from '@input/drag-aim';
 import { listenForTouchGesture } from '@input/touch-gesture';
-import { syncAthleteViews } from '@render/athlete-view';
+import { loadAthleteModels } from '@render/athlete-model/load-athlete-models';
+import { animateAthleteViews, dressAthleteViews, syncAthleteViews } from '@render/athlete-view';
 import { syncBallView } from '@render/ball-view';
 import { syncContactCue } from '@render/contact-cue';
 import { createCourtScene } from '@render/court-scene';
@@ -43,6 +44,13 @@ const world = createWorld({
   aiAthleteIds: [ATHLETE_B_ID],
 });
 const view = createCourtScene(engine, world, PLAYER_ATHLETE_ID);
+
+// The capsules play until the 3D models arrive; if they never do, the game still works.
+void loadAthleteModels(view.scene, import.meta.env.BASE_URL)
+  .then((models) => dressAthleteViews(view.athletes, models, world.athletes))
+  .catch((error: unknown) =>
+    console.warn('Athlete models failed to load; keeping capsules.', error),
+  );
 
 let runner = createSimulationRunner(world);
 const commands: WorldCommand[] = [];
@@ -89,7 +97,8 @@ engine.runRenderLoop(() => {
   // Slow motion lasts the whole aiming time, finger down or not: a quick tap leaves room to
   // press and drag again.
   const aiming = isAwaitingAim(runner.current, PLAYER_ATHLETE_ID);
-  const gameSeconds = aiming ? frameSeconds * AIM_SLOW_MOTION_SCALE : frameSeconds;
+  const timeScale = aiming ? AIM_SLOW_MOTION_SCALE : 1;
+  const gameSeconds = frameSeconds * timeScale;
   const advance = advanceSimulation(runner, gameSeconds, commands);
   runner = advance.runner;
   // The runner copied what it needed; reuse the same array next frame.
@@ -104,6 +113,7 @@ engine.runRenderLoop(() => {
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
+  animateAthleteViews(view.athletes, runner.current, gameSeconds, timeScale);
   syncContactCue(view.contactCue, runner.current, PLAYER_ATHLETE_ID, runner.alpha);
   view.camera.update(runner.current, frameSeconds);
   view.scene.render();
