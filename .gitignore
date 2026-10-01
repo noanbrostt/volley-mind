@@ -27,3 +27,6 @@ coverage
 
 # Raw third-party asset packs (security-checked, CC0); only optimized outputs are committed
 asset-packs
+
+# Playwright MCP screenshots and logs (debugging only)
+.playwright-mcp

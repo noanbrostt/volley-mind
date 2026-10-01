@@ -6,7 +6,6 @@ import {
 } from '@config/touch-control';
 import { aimFromDrag, idealDragLength } from '@input/drag-aim';
 import { listenForTouchGesture } from '@input/touch-gesture';
-import { loadAthleteModels } from '@render/athlete-model/load-athlete-models';
 import { animateAthleteViews, dressAthleteViews, syncAthleteViews } from '@render/athlete-view';
 import { syncBallView } from '@render/ball-view';
 import { syncContactCue } from '@render/contact-cue';
@@ -46,7 +45,9 @@ const world = createWorld({
 const view = createCourtScene(engine, world, PLAYER_ATHLETE_ID);
 
 // The capsules play until the 3D models arrive; if they never do, the game still works.
-void loadAthleteModels(view.scene, import.meta.env.BASE_URL)
+// The loading code itself (glTF loader, retargeting) downloads on demand too.
+void import('@render/athlete-model/load-athlete-models')
+  .then(({ loadAthleteModels }) => loadAthleteModels(view.scene, import.meta.env.BASE_URL))
   .then((models) => dressAthleteViews(view.athletes, models, world.athletes))
   .catch((error: unknown) =>
     console.warn('Athlete models failed to load; keeping capsules.', error),

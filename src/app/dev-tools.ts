@@ -2,11 +2,19 @@ import type { Scene } from '@babylonjs/core/scene';
 
 const INSPECTOR_TOGGLE_KEY = 'KeyI';
 
+declare global {
+  interface Window {
+    /** Development only: lets debugging tools (Playwright) reach the scene. */
+    volleyMindScene?: Scene;
+  }
+}
+
 /**
  * Development-only helpers. This module is loaded through dynamic import behind
  * import.meta.env.DEV, so none of it reaches production builds.
  */
 export function startDevTools(scene: Scene): void {
+  window.volleyMindScene = scene;
   listenForInspectorToggle(scene);
 }
 
