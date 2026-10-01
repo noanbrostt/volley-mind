@@ -16,6 +16,13 @@ Em **quadra**. A quadra é sempre a preferência; a areia só entra no jogo depo
 
 O jogador humano controla um atleta (A) e a IA controla o outro (B).
 
+Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
+
+- **Tempo:** o jogador encosta o dedo quando a bola chega. A precisão do tempo pesa na qualidade do toque.
+- **Direção e força:** arrastando o dedo, a direção é para onde o corpo aponta e o comprimento do arrasto doseia a força.
+- O atleta **se desloca sozinho** (com seus atributos de velocidade e leitura) e escolhe a **técnica** pela regra deste modo (toque com prioridade; manchete quando a bola vem ruim).
+- Controlar os passos e o peixinho com o outro polegar pode entrar depois, no 6x6.
+
 ## Posicionamento
 
 - Dois atletas, A e B, frente a frente, a cerca de **6 m** de distância.
@@ -71,5 +78,4 @@ Cada atleta repete o ciclo **ataque → levantamento → defesa**, e os toques a
 
 ## Em aberto
 
-- O que o jogador controla em cada toque (tempo, posicionamento, direção, técnica, força). O Noan aceita sugestões.
 - Combo e recorde: confirmar se entram e como contam.
