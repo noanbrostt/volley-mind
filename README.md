@@ -4,7 +4,7 @@ Jogo 3D de vôlei que roda no navegador, pensado primeiro para o celular (tela n
 
 O objetivo atual é o **aquecimento de ataque e defesa 1x1**: dois atletas, uma bola, sem rede e sem adversário. No longo prazo, o 6x6 com posições, rodízio e modo carreira.
 
-Por enquanto existe a fundação: uma bola com física própria quicando na areia. Tocar na tela relança a bola.
+Por enquanto existe a fundação: uma bola com física própria quicando na quadra. Tocar na tela relança a bola.
 
 ## Como rodar
 

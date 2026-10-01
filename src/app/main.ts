@@ -1,6 +1,6 @@
 import { listenForLaunch } from '@input/pointer-launch';
 import { syncBallView } from '@render/ball-view';
-import { createBeachScene } from '@render/beach-scene';
+import { createCourtScene } from '@render/court-scene';
 import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
 import type { WorldCommand } from '@simulation/world-command';
@@ -20,7 +20,7 @@ canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
 const engine = createEngine(canvas);
 watchCanvasResize(engine);
-const view = createBeachScene(engine);
+const view = createCourtScene(engine);
 
 let runner = createSimulationRunner(createWorld());
 const commands: WorldCommand[] = [];

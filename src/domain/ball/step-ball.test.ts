@@ -42,8 +42,8 @@ describe('stepBall in flight', () => {
   });
 });
 
-describe('stepBall on the sand', () => {
-  it('bounces with the speed kept by the sand, reporting where and when it hit', () => {
+describe('stepBall on the floor', () => {
+  it('bounces with the speed kept by the floor, reporting where and when it hit', () => {
     const start = ballAt(Vec3.create(1, 2, -1), Vec3.create(4, 0, 0));
     let ball = start;
     let bounce: BallBounce | undefined;
@@ -64,7 +64,7 @@ describe('stepBall on the sand', () => {
     expect(ball.velocity.x).toBeCloseTo(4 * noDrag.tangentialRetention, 10);
   });
 
-  it('eventually settles and stops rolling, never sinking into the sand', () => {
+  it('eventually settles and stops rolling, never sinking into the floor', () => {
     let ball = ballAt(Vec3.create(0, 3, 0), Vec3.create(6, 5, 2));
     for (let i = 0; i < 60 * 20; i++) {
       ball = stepBall(ball, physics, DT).ball;
@@ -79,8 +79,10 @@ describe('stepBall on the sand', () => {
     const once = stepBall(rolling, physics, DT).ball;
     expect(once.velocity.x).toBeCloseTo(1.5 - physics.rollingDeceleration * DT, 10);
 
+    // Run past the stop time, whatever the floor's deceleration is tuned to.
+    const stepsUntilStopped = Math.ceil(1.5 / physics.rollingDeceleration / DT) + 10;
     let ball = rolling;
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < stepsUntilStopped; i++) {
       ball = stepBall(ball, physics, DT).ball;
     }
     const stopDistance = 1.5 ** 2 / (2 * physics.rollingDeceleration);
@@ -88,14 +90,14 @@ describe('stepBall on the sand', () => {
     expect(ball.position.x).toBeCloseTo(stopDistance, 10);
   });
 
-  it('leaves a still ball on the sand untouched', () => {
+  it('leaves a still ball on the floor untouched', () => {
     const still = ballAt(Vec3.create(2, physics.radius, 3), Vec3.ZERO);
     const result = stepBall(still, physics, DT);
     expect(result.ball).toEqual(still);
     expect(result.bounce).toBeUndefined();
   });
 
-  it('bounces lower each time on sand', () => {
+  it('bounces lower each time', () => {
     let ball = ballAt(Vec3.create(0, 4, 0), Vec3.ZERO);
     const impactSpeeds: number[] = [];
     for (let i = 0; i < 60 * 10; i++) {

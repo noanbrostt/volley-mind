@@ -80,4 +80,5 @@ Para que serve o toque.
 | Bola | `ball` |
 | Quique (bola batendo no chão) | `bounce` |
 | Ponto de queda | `landing` |
+| Quadra | `court` |
 | Areia | `sand` |

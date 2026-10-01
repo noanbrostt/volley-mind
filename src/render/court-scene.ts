@@ -16,20 +16,20 @@ import {
   CAMERA_ORBIT_ANGLE_RAD,
   CAMERA_TARGET_HEIGHT_M,
   CAMERA_TILT_FROM_VERTICAL_RAD,
-  SAND_AREA_SIZE_M,
-  SAND_COLOR_HEX,
-  SKY_COLOR_HEX,
-  SKY_LIGHT_INTENSITY,
-} from '@config/beach-scene';
+  CEILING_LIGHT_INTENSITY,
+  COURT_FLOOR_AREA_SIZE_M,
+  COURT_FLOOR_COLOR_HEX,
+  GYM_BACKGROUND_COLOR_HEX,
+} from '@config/court-scene';
 
-export interface BeachScene {
+export interface CourtScene {
   readonly scene: Scene;
   readonly ball: Mesh;
 }
 
-export function createBeachScene(engine: Engine): BeachScene {
+export function createCourtScene(engine: Engine): CourtScene {
   const scene = new Scene(engine);
-  scene.clearColor = Color4.FromColor3(Color3.FromHexString(SKY_COLOR_HEX));
+  scene.clearColor = Color4.FromColor3(Color3.FromHexString(GYM_BACKGROUND_COLOR_HEX));
 
   const camera = new ArcRotateCamera(
     'camera',
@@ -42,11 +42,15 @@ export function createBeachScene(engine: Engine): BeachScene {
   // The camera is fixed: touches belong to the game, not to orbiting.
   camera.inputs.clear();
 
-  const light = new HemisphericLight('sky-light', Vector3.Up(), scene);
-  light.intensity = SKY_LIGHT_INTENSITY;
+  const light = new HemisphericLight('ceiling-light', Vector3.Up(), scene);
+  light.intensity = CEILING_LIGHT_INTENSITY;
 
-  const sand = CreateGround('sand', { width: SAND_AREA_SIZE_M, height: SAND_AREA_SIZE_M }, scene);
-  sand.material = flatMaterial('sand-material', SAND_COLOR_HEX, scene);
+  const floor = CreateGround(
+    'court-floor',
+    { width: COURT_FLOOR_AREA_SIZE_M, height: COURT_FLOOR_AREA_SIZE_M },
+    scene,
+  );
+  floor.material = flatMaterial('court-floor-material', COURT_FLOOR_COLOR_HEX, scene);
 
   const ball = CreateSphere(
     'ball',

@@ -12,7 +12,7 @@ No vôlei do jogo, **toques são regras, não colisões**: um contato define dir
 - **Nenhum motor de física.** A bola é simulada em `src/domain/ball/` com fórmulas próprias, em TypeScript puro.
 - A bola em voo sofre gravidade e resistência do ar quadrática. A aceleração é uma **soma de contribuições**: o efeito (Magnus) entra como mais uma parcela, sem mudar o resto.
 - A integração é de segunda ordem (Heun). É exata para a parábola sem resistência do ar e precisa a 60 Hz com ela.
-- O contato com a areia é resolvido dentro do passo, no instante exato do impacto, com restituição, retenção horizontal, assentamento e rolamento. Os valores ficam em `src/config/`.
+- O contato com o piso da quadra é resolvido dentro do passo, no instante exato do impacto, com restituição, retenção horizontal, assentamento e rolamento. Os valores ficam em `src/config/` (`court-floor.ts`); outro piso (a areia, no futuro) é só outro conjunto de valores.
 - A **previsão do ponto de queda** repete os mesmos passos fixos da simulação. Por isso ela coincide com o que vai acontecer.
 
 ## Consequências

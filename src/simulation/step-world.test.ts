@@ -10,7 +10,7 @@ import { createWorld, type WorldState } from './world-state';
 const DT = SIMULATION_STEP_S;
 
 describe('createWorld', () => {
-  it('starts at tick 0 with a still ball above the sand', () => {
+  it('starts at tick 0 with a still ball above the floor', () => {
     const world = createWorld();
     expect(world.tick).toBe(0);
     expect(world.ball.position).toEqual(Vec3.create(0, BALL_SPAWN_HEIGHT_M, 0));

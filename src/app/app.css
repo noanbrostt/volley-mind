@@ -4,7 +4,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #8fc9ec;
+  background: #2c3440;
   /* No pull-to-refresh, scroll chaining or rubber-band bounce on mobile. */
   overscroll-behavior: none;
   /* Keep the browser from resizing text when rotating the phone. */

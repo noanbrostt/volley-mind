@@ -5,14 +5,14 @@ import { type BallState, isBallResting } from './ball-state';
 import { stepBall } from './step-ball';
 
 export interface LandingPrediction {
-  /** Where the ball will first touch the sand (y = 0), in m. */
+  /** Where the ball will first touch the floor (y = 0), in m. */
   readonly groundPoint: Vec3;
   /** In s, counted from the given state. */
   readonly secondsFromNow: number;
 }
 
 /**
- * Where and when the ball will first touch the sand. It replays the exact same fixed steps
+ * Where and when the ball will first touch the floor. It replays the exact same fixed steps
  * the simulation will run, so the answer matches what will happen, down to the sub-step
  * moment of impact. Returns null for a resting ball or one that stays up past the horizon.
  */

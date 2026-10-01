@@ -86,7 +86,7 @@ describe('predictLanding', () => {
     expect(predicted?.groundPoint.z).toBeCloseTo(1 - 2 * t, 2);
   });
 
-  it('returns null for a ball resting on the sand', () => {
+  it('returns null for a ball resting on the floor', () => {
     const resting: BallState = {
       position: Vec3.create(0, physics.radius, 0),
       velocity: Vec3.create(1, 0, 0),

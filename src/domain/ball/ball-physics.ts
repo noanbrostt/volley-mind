@@ -1,11 +1,11 @@
 import { BALL_DRAG_COEFFICIENT, BALL_MASS_KG, BALL_RADIUS_M } from '@config/ball';
-import { AIR_DENSITY_KG_PER_M3, GRAVITY_MPS2 } from '@config/physics';
 import {
-  SAND_REST_SPEED_MPS,
-  SAND_RESTITUTION,
-  SAND_ROLLING_DECELERATION_MPS2,
-  SAND_TANGENTIAL_RETENTION,
-} from '@config/sand';
+  COURT_FLOOR_REST_SPEED_MPS,
+  COURT_FLOOR_RESTITUTION,
+  COURT_FLOOR_ROLLING_DECELERATION_MPS2,
+  COURT_FLOOR_TANGENTIAL_RETENTION,
+} from '@config/court-floor';
+import { AIR_DENSITY_KG_PER_M3, GRAVITY_MPS2 } from '@config/physics';
 import { Vec3 } from '@core/vec3';
 
 /** Everything the ball simulation needs, already combined into the form the formulas use. */
@@ -44,10 +44,10 @@ export const DEFAULT_BALL_PHYSICS: BallPhysics = Object.freeze({
     AIR_DENSITY_KG_PER_M3,
   ),
   radius: BALL_RADIUS_M,
-  restitution: SAND_RESTITUTION,
-  tangentialRetention: SAND_TANGENTIAL_RETENTION,
-  restSpeed: SAND_REST_SPEED_MPS,
-  rollingDeceleration: SAND_ROLLING_DECELERATION_MPS2,
+  restitution: COURT_FLOOR_RESTITUTION,
+  tangentialRetention: COURT_FLOOR_TANGENTIAL_RETENTION,
+  restSpeed: COURT_FLOOR_REST_SPEED_MPS,
+  rollingDeceleration: COURT_FLOOR_ROLLING_DECELERATION_MPS2,
 });
 
 /**
