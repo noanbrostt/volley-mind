@@ -1,8 +1,8 @@
-import { ATHLETE_RETURN_SPEED_RATIO } from '@config/athlete';
+import { ATHLETE_RETURN_WALK_SPEED_MPS } from '@config/athlete';
 import { DRILL_RESTART_DELAY_S } from '@config/attack-defense-drill';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
-import { maxSpeedOf, moveAthleteToward, paceSpeed } from '@domain/athlete/move-athlete';
+import { moveAthleteToward, paceSpeed } from '@domain/athlete/move-athlete';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import { type BallBounce, stepBall } from '@domain/ball/step-ball';
 import { selfToss } from '@domain/contact/self-toss';
@@ -105,7 +105,8 @@ function breakLoop(
  * touch, whoever went to fetch the ball walks back to base.
  */
 function footwork(world: WorldState, athlete: AthleteState, dt: number): AthleteState {
-  const returnSpeed = maxSpeedOf(athlete) * ATHLETE_RETURN_SPEED_RATIO;
+  // Going back to base is never urgent (Noan): a walk, not a run.
+  const returnSpeed = ATHLETE_RETURN_WALK_SPEED_MPS;
   if (world.drill.phase === 'broken') {
     return moveAthleteToward(athlete, athlete.basePosition, dt, returnSpeed);
   }

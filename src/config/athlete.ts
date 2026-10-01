@@ -20,8 +20,8 @@ export const ATHLETE_ACCELERATION_MPS2 = 10;
 export const ATHLETE_ARRIVAL_LEAD_MIN_S = 0.1;
 export const ATHLETE_ARRIVAL_LEAD_MAX_S = 0.5;
 
-/** Walking back to base after a touch, as a fraction of top speed: no rush. */
-export const ATHLETE_RETURN_SPEED_RATIO = 0.7;
+/** Walking back to base after a touch: an unhurried walk, whatever the athlete's speed, in m/s. */
+export const ATHLETE_RETURN_WALK_SPEED_MPS = 1.2;
 
 /** How far "one or two steps" reach from the base position, in m. */
 export const ATHLETE_STEP_REACH_M = 1.2;
