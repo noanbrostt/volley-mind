@@ -1,0 +1,291 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!docs"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "path": "./lint/no-math-random.grit",
+      "includes": ["**/src/core/**", "**/src/config/**", "**/src/domain/**", "**/src/simulation/**"]
+    },
+    {
+      "path": "./lint/domain-types-only.grit",
+      "includes": ["**/src/input/**", "**/src/render/**", "**/src/ui/**"]
+    }
+  ],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": { "filenameCases": ["kebab-case"] }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["../**"],
+                "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/core/**", "src/config/**", "src/domain/**", "src/simulation/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "window": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "document": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "navigator": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "location": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "localStorage": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "sessionStorage": "Pure layers must not touch the DOM (see CLAUDE.md).",
+                  "requestAnimationFrame": "Pure layers advance through the fixed-step clock, not the browser frame loop.",
+                  "cancelAnimationFrame": "Pure layers advance through the fixed-step clock, not the browser frame loop.",
+                  "setTimeout": "Pure layers advance through the fixed-step clock, not timers.",
+                  "setInterval": "Pure layers advance through the fixed-step clock, not timers.",
+                  "performance": "Wall-clock time breaks determinism. Use the simulation clock.",
+                  "Date": "Wall-clock time breaks determinism. Use the simulation clock."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": [
+                      "@config/**",
+                      "@domain/**",
+                      "@simulation/**",
+                      "@input/**",
+                      "@render/**",
+                      "@ui/**",
+                      "@app/**",
+                      "@babylonjs/**"
+                    ],
+                    "message": "core/ imports nothing from the project (see the layer table in CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/config/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": [
+                      "@domain/**",
+                      "@simulation/**",
+                      "@input/**",
+                      "@render/**",
+                      "@ui/**",
+                      "@app/**",
+                      "@babylonjs/**"
+                    ],
+                    "message": "config/ may only import core (see the layer table in CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/domain/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": [
+                      "@simulation/**",
+                      "@input/**",
+                      "@render/**",
+                      "@ui/**",
+                      "@app/**",
+                      "@babylonjs/**"
+                    ],
+                    "message": "domain/ may only import core and config. The domain never knows the visuals (see CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/simulation/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": ["@input/**", "@render/**", "@ui/**", "@app/**", "@babylonjs/**"],
+                    "message": "simulation/ may only import domain, core and config (see the layer table in CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/input/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": ["@render/**", "@ui/**", "@app/**"],
+                    "message": "input/ may only import simulation, domain types, core and config (see CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/render/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": ["@input/**", "@ui/**", "@app/**"],
+                    "message": "render/ may only import simulation, domain types, core and config (see CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/ui/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**"],
+                    "message": "Import from other folders through the layer aliases (@core, @domain...), not ../ (see CLAUDE.md)."
+                  },
+                  {
+                    "group": ["@input/**", "@render/**", "@app/**"],
+                    "message": "ui/ may only import simulation, domain types, core and config (see CLAUDE.md)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

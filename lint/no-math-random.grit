@@ -1,0 +1,3 @@
+`Math.random()` as $call where {
+  register_diagnostic(span=$call, message="Math.random breaks determinism. Use the seeded RNG from @core instead (see CLAUDE.md).", severity="error")
+}

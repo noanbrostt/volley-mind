@@ -1,0 +1,5 @@
+`import $clause from $source` as $import where {
+  $source <: r"['\"]@domain/.*['\"]",
+  not $import <: r"import\s+type\s[\s\S]*",
+  register_diagnostic(span=$import, message="Presentation layers may only import types from @domain. Use `import type` (see CLAUDE.md).", severity="error")
+}
