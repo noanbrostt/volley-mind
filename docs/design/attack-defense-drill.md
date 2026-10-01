@@ -30,8 +30,9 @@ Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
 - Cada um tem uma **posição base**. Se os fundamentos saem bem, o atleta praticamente não sai do lugar: o movimento é do corpo, alternando entre os fundamentos.
 - Todas as ações buscam colocar a bola onde o colega **não precise andar**. Se alguém está andando para continuar o ataque ou a defesa, tudo bem, mas é porque alguém errou um pouco.
 - Se uma bola chega um pouco fora, o atleta dá **um ou dois passos** para alcançá-la e depois **volta para a posição base**.
-- O atleta só se movimenta quando a bola **começa a vir na direção dele**. Na prática, um se movimenta por vez: quem acabou de tocar fica onde está até a bola voltar para ele.
+- O atleta só se movimenta quando a bola **começa a vir na direção dele**. A exceção é a volta: quem saiu da base para buscar uma bola pega a bola e **volta para onde estava**, mesmo sem a bola vir na direção dele.
 - O movimento é suave: o atleta acelera e freia, não sai nem para de uma vez.
+- Bola alta não exige pressa: o atleta pode "enrolar" para chegar embaixo dela. Ele pode chegar adiantado, mas nem sempre com a mesma antecedência, o que dá naturalidade.
 - Se a bola chega mais longe que isso, o atleta pode fazer um **peixinho**. Depois do peixinho, o **tempo de recuperação** para voltar à posição base é maior.
 
 ## Sequência

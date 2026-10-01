@@ -1,6 +1,8 @@
+import { ATHLETE_RETURN_SPEED_RATIO } from '@config/athlete';
 import { DRILL_RESTART_DELAY_S } from '@config/attack-defense-drill';
+import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
-import { moveAthleteToward, stoppingPoint } from '@domain/athlete/move-athlete';
+import { maxSpeedOf, moveAthleteToward, paceSpeed } from '@domain/athlete/move-athlete';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import { type BallBounce, stepBall } from '@domain/ball/step-ball';
 import { selfToss } from '@domain/contact/self-toss';
@@ -98,16 +100,22 @@ function breakLoop(
 }
 
 /**
- * Athletes only move when the ball starts coming toward them (Noan), so one moves at a time:
- * the next toucher heads for the ball, the others stay where they are. Between rallies
- * everyone walks back to base.
+ * Footwork in the drill (Noan): an athlete moves toward the ball only once it starts coming
+ * to them, pacing themselves to be in place a little early when the ball is high. After a
+ * touch, whoever went to fetch the ball walks back to base.
  */
 function footwork(world: WorldState, athlete: AthleteState, dt: number): AthleteState {
+  const returnSpeed = maxSpeedOf(athlete) * ATHLETE_RETURN_SPEED_RATIO;
   if (world.drill.phase === 'broken') {
-    return moveAthleteToward(athlete, athlete.basePosition, dt);
+    return moveAthleteToward(athlete, athlete.basePosition, dt, returnSpeed);
   }
   const { incoming } = world.drill;
   const plan = !incoming.spent && incoming.athleteId === athlete.id ? incoming.plan : null;
-  const target = plan ? reachableSpot(athlete, plan.standPosition) : stoppingPoint(athlete);
-  return moveAthleteToward(athlete, target, dt);
+  if (!plan) {
+    return moveAthleteToward(athlete, athlete.basePosition, dt, returnSpeed);
+  }
+  const spot = reachableSpot(athlete, plan.standPosition);
+  const secondsLeft = (incoming.contactTick - world.tick) * dt - incoming.arrivalLeadS;
+  const pace = paceSpeed(athlete, Vec3.distance(athlete.position, spot), secondsLeft);
+  return moveAthleteToward(athlete, spot, dt, pace);
 }

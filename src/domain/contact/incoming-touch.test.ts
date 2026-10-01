@@ -21,7 +21,7 @@ const plan: TouchPlan = {
   hardReasons: [],
 };
 // Ball leaves at tick 100 and meets the contact point 1 s (60 ticks) later.
-const incoming = createIncomingTouch('a', 'set', plan, 100, DT);
+const incoming = createIncomingTouch('a', 'set', plan, 100, DT, 0.2);
 const windowTicks = TOUCH_TIMING_WINDOW_S / DT;
 
 describe('incoming touch', () => {
@@ -32,7 +32,7 @@ describe('incoming touch', () => {
   });
 
   it('is spent from the start when the ball cannot be played', () => {
-    expect(createIncomingTouch('a', 'dig', null, 100, DT).spent).toBe(true);
+    expect(createIncomingTouch('a', 'dig', null, 100, DT, 0.2).spent).toBe(true);
   });
 
   it('accepts one release inside the window and ignores the rest', () => {

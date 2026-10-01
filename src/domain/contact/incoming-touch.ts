@@ -21,6 +21,8 @@ export interface IncomingTouch {
   readonly plan: TouchPlan | null;
   /** Simulation tick (fractional) at which the ball meets the contact point. */
   readonly contactTick: number;
+  /** How long before contact the athlete means to be in place, when time allows, in s. */
+  readonly arrivalLeadS: number;
   readonly release: TouchRelease | null;
   /** True once the chance is gone: released out of time, never released, or unplayable. */
   readonly spent: boolean;
@@ -32,12 +34,14 @@ export function createIncomingTouch(
   plan: TouchPlan | null,
   nowTick: number,
   stepSeconds: number,
+  arrivalLeadS: number,
 ): IncomingTouch {
   return {
     athleteId,
     action,
     plan,
     contactTick: plan ? nowTick + plan.contact.secondsFromNow / stepSeconds : nowTick,
+    arrivalLeadS,
     release: null,
     spent: plan === null,
   };

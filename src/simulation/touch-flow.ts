@@ -1,3 +1,5 @@
+import { ATHLETE_ARRIVAL_LEAD_MAX_S, ATHLETE_ARRIVAL_LEAD_MIN_S } from '@config/athlete';
+import { nextRange } from '@core/seeded-rng';
 import { Vec3 } from '@core/vec3';
 import { decideAiTouch } from '@domain/ai/decide-touch';
 import type { AthleteId } from '@domain/athlete/athlete-state';
@@ -36,12 +38,14 @@ export function expectTouch(
     return world;
   }
   const plan = planTouch(athlete, action, world.ball, physics, dt);
-  const incoming = createIncomingTouch(athleteId, action, plan, nowTick, dt);
-  const expecting: WorldState = { ...world, drill: { phase: 'rally', incoming } };
+  // A fresh arrival lead for every ball, so nobody gets under it the same way twice.
+  const lead = nextRange(world.rng, ATHLETE_ARRIVAL_LEAD_MIN_S, ATHLETE_ARRIVAL_LEAD_MAX_S);
+  const incoming = createIncomingTouch(athleteId, action, plan, nowTick, dt, lead.value);
+  const expecting: WorldState = { ...world, drill: { phase: 'rally', incoming }, rng: lead.next };
   if (!plan || !world.aiAthleteIds.includes(athleteId)) {
     return expecting;
   }
-  const decision = decideAiTouch(athlete, action, world.rng);
+  const decision = decideAiTouch(athlete, action, expecting.rng);
   return {
     ...expecting,
     rng: decision.rng,

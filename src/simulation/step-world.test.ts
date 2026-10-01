@@ -127,22 +127,41 @@ describe('stepWorld: the attack-defense drill', () => {
     expect(eventsOf(events, 'loop-restarted').length).toBeGreaterThan(1);
   });
 
-  it('moves one athlete at a time: only the one the ball is coming to speeds up', () => {
+  it('moves only toward the ball coming in, or back to base: a resting athlete waits', () => {
     let world = drillWorld({ attribute: 40, seed: 5 });
+    let waited = 0;
     for (let i = 0; i < Math.round(40 / DT); i++) {
       const next = stepWorld(world, [], DT).world;
       if (world.drill.phase === 'rally' && next.drill.phase === 'rally') {
         const comingTo = next.drill.incoming.athleteId;
         next.athletes.forEach((athlete, index) => {
           const before = world.athletes[index];
-          if (athlete.id !== comingTo && before) {
-            expect(Vec3.length(athlete.velocity)).toBeLessThanOrEqual(
-              Vec3.length(before.velocity) + 1e-9,
-            );
+          const restingOnBase =
+            before &&
+            Vec3.lengthSquared(before.velocity) === 0 &&
+            Vec3.distance(before.position, before.basePosition) === 0;
+          if (athlete.id !== comingTo && restingOnBase) {
+            expect(athlete.position).toEqual(athlete.basePosition);
+            waited++;
           }
         });
       }
       world = next;
+    }
+    expect(waited).toBeGreaterThan(0);
+  });
+
+  it('walks back to base after going to fetch a ball', () => {
+    const { world } = run(drillWorld({ attribute: 40, seed: 5 }), 40);
+    // Whoever is not expecting the ball is on base or heading there.
+    if (world.drill.phase === 'rally') {
+      const comingTo = world.drill.incoming.athleteId;
+      for (const athlete of world.athletes) {
+        if (athlete.id !== comingTo && Vec3.lengthSquared(athlete.velocity) > 0) {
+          const toBase = Vec3.sub(athlete.basePosition, athlete.position);
+          expect(Vec3.dot(athlete.velocity, toBase)).toBeGreaterThan(0);
+        }
+      }
     }
   });
 

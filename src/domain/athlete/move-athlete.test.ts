@@ -7,7 +7,7 @@ import { Vec3 } from '@core/vec3';
 import { describe, expect, it } from 'vitest';
 import { type AthleteState, createAthlete } from './athlete-state';
 import { uniformAttributes } from './attributes';
-import { maxSpeedOf, moveAthleteToward, stoppingPoint, timeToReach } from './move-athlete';
+import { maxSpeedOf, moveAthleteToward, paceSpeed, timeToReach } from './move-athlete';
 
 const DT = 1 / 60;
 const athlete = createAthlete({ id: 'a', basePosition: Vec3.create(0, 0, -3), facing: 0 });
@@ -97,19 +97,26 @@ describe('moveAthleteToward', () => {
   });
 });
 
-describe('stoppingPoint', () => {
-  it('lets a moving athlete brake to a halt ahead, without turning back', () => {
-    const running: AthleteState = { ...athlete, velocity: Vec3.create(3, 0, 0) };
-    const stop = stoppingPoint(running);
-    expect(stop.x).toBeCloseTo(3 ** 2 / (2 * ATHLETE_ACCELERATION_MPS2), 12);
-    const states = walk(running, stop);
-    for (const state of states) {
-      expect(state.velocity.x).toBeGreaterThanOrEqual(0);
+describe('paceSpeed', () => {
+  it('takes it easy with time to spare and arrives about on time', () => {
+    const goal = Vec3.add(athlete.position, Vec3.create(1, 0, 0));
+    const deadline = 1.5;
+    let current = athlete;
+    let elapsed = 0;
+    while (Vec3.distance(current.position, goal) > 0 && elapsed < 5) {
+      const pace = paceSpeed(current, Vec3.distance(current.position, goal), deadline - elapsed);
+      current = moveAthleteToward(current, goal, DT, pace);
+      elapsed += DT;
     }
+    expect(elapsed).toBeGreaterThan(deadline - 0.15);
+    expect(elapsed).toBeLessThan(deadline + 0.15);
+    expect(paceSpeed(athlete, 1, deadline)).toBeLessThan(maxSpeedOf(athlete));
   });
 
-  it('is the athlete’s own position when standing still', () => {
-    expect(stoppingPoint(athlete)).toEqual(athlete.position);
+  it('sprints when there is no time to spare', () => {
+    expect(paceSpeed(athlete, 3, 0.4)).toBe(maxSpeedOf(athlete));
+    expect(paceSpeed(athlete, 1, -0.1)).toBe(maxSpeedOf(athlete));
+    expect(paceSpeed(athlete, 0, 1)).toBe(0);
   });
 });
 

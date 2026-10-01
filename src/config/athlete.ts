@@ -13,6 +13,16 @@ export const ATHLETE_MAX_SPEED_MPS = 4;
 /** How quickly an athlete speeds up and brakes, in m/s². Short volleyball steps start sharp. */
 export const ATHLETE_ACCELERATION_MPS2 = 10;
 
+/**
+ * With time to spare (a high ball) the athlete paces themselves to be under the ball this
+ * long before contact, drawn anew for every ball so the timing never looks robotic, in s.
+ */
+export const ATHLETE_ARRIVAL_LEAD_MIN_S = 0.1;
+export const ATHLETE_ARRIVAL_LEAD_MAX_S = 0.5;
+
+/** Walking back to base after a touch, as a fraction of top speed: no rush. */
+export const ATHLETE_RETURN_SPEED_RATIO = 0.7;
+
 /** How far "one or two steps" reach from the base position, in m. */
 export const ATHLETE_STEP_REACH_M = 1.2;
 

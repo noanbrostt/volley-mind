@@ -26,21 +26,36 @@ export function timeToReach(athlete: AthleteState, distance: number): number {
   return (2 * top) / ATHLETE_ACCELERATION_MPS2 + (distance - accelerationDistance) / top;
 }
 
-/** Where the athlete comes to rest if they start braking now. */
-export function stoppingPoint(athlete: AthleteState): Vec3 {
-  const speed = Vec3.length(athlete.velocity);
-  return Vec3.add(
-    athlete.position,
-    Vec3.scale(athlete.velocity, speed / (2 * ATHLETE_ACCELERATION_MPS2)),
-  );
+/**
+ * Cruise speed that covers `distance` in exactly `seconds` (speeding up and braking at the
+ * athlete's rate): how an athlete with time to spare paces themselves instead of sprinting.
+ * Top speed when there is no time to spare.
+ */
+export function paceSpeed(athlete: AthleteState, distance: number, seconds: number): number {
+  const top = maxSpeedOf(athlete);
+  if (distance <= 0) {
+    return 0;
+  }
+  const a = ATHLETE_ACCELERATION_MPS2;
+  // Rest-to-rest trapezoid: distance = v·t − v²/a, solved for the slower cruise speed v.
+  const discriminant = a * a * seconds * seconds - 4 * a * distance;
+  if (seconds <= 0 || discriminant < 0) {
+    return top;
+  }
+  return Math.min(top, (a * seconds - Math.sqrt(discriminant)) / 2);
 }
 
 /**
  * Moves the athlete along the floor toward `target`, speeding up and braking smoothly, never
- * past their top speed, and stops on it. To halt, aim at stoppingPoint(athlete).
- * Facing is left to the caller: in the drill athletes keep facing each other.
+ * past `speedLimit` (their top speed by default), and stops on it. Facing is left to the
+ * caller: in the drill athletes keep facing each other.
  */
-export function moveAthleteToward(athlete: AthleteState, target: Vec3, dt: number): AthleteState {
+export function moveAthleteToward(
+  athlete: AthleteState,
+  target: Vec3,
+  dt: number,
+  speedLimit: number = maxSpeedOf(athlete),
+): AthleteState {
   const goal = Vec3.create(target.x, 0, target.z);
   const toGoal = Vec3.sub(goal, athlete.position);
   const distance = Vec3.length(toGoal);
@@ -50,7 +65,7 @@ export function moveAthleteToward(athlete: AthleteState, target: Vec3, dt: numbe
 
   // Fastest speed from which the athlete can still brake to a stop right on the goal.
   const brakingSpeed = Math.sqrt(2 * ATHLETE_ACCELERATION_MPS2 * distance);
-  const desiredSpeed = Math.min(maxSpeedOf(athlete), brakingSpeed);
+  const desiredSpeed = Math.min(speedLimit, maxSpeedOf(athlete), brakingSpeed);
   const desired = distance > 0 ? Vec3.scale(toGoal, desiredSpeed / distance) : Vec3.ZERO;
 
   const change = Vec3.sub(desired, athlete.velocity);

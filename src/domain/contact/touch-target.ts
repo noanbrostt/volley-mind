@@ -7,7 +7,6 @@ import {
 import type { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
-import { stoppingPoint } from '@domain/athlete/move-athlete';
 import type { Action } from './action';
 import type { Technique } from './technique';
 
@@ -26,16 +25,16 @@ export interface TouchTarget {
 }
 
 /**
- * The ideal destination of a touch in the drill: on the receiver where they will be standing,
- * so they do not have to move (Noan: every action looks for the spot where the partner does
- * not need to walk).
+ * The ideal destination of a touch in the drill: on the receiver at their base — where they
+ * stand, or are walking back to after fetching a ball — so they do not have to move (Noan:
+ * every action looks for the spot where the partner does not need to walk).
  */
 export function touchTargetFor(
   action: Action,
   technique: Technique,
   receiver: AthleteState,
 ): TouchTarget {
-  const standing: AthleteState = { ...receiver, position: stoppingPoint(receiver) };
+  const standing: AthleteState = { ...receiver, position: receiver.basePosition };
   switch (action) {
     case 'set':
       // Above the attacker, to hit with the arm stretched up.
