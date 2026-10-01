@@ -15,19 +15,31 @@ export interface TouchGestureOptions {
   readonly onDrag: (drag: Drag | null, fullDragPx: number) => void;
 }
 
+export interface TouchGesture {
+  /** Forget the aim carried between presses: call once the ball no longer waits for it. */
+  resetAimCarry(): void;
+  detach(): void;
+}
+
 /**
  * One thumb: the first finger down is the moment of the touch; dragging aims (each move
  * updates the aim) and lifting after a real drag confirms it. A quick tap confirms nothing:
- * the player may press and drag again while the aiming time lasts. Only the first finger
- * counts. Returns a detach function.
+ * the player may press and drag again while the aiming time lasts, and that new drag picks
+ * up from the aim already set instead of starting over. Only the first finger counts.
  */
 export function listenForTouchGesture(
   target: HTMLElement,
   options: TouchGestureOptions,
-): () => void {
+): TouchGesture {
   let pointerId: number | null = null;
   let drag: Drag | null = null;
   let fullDragPx = 0;
+  // Where this press began, to tell a quick tap from a real drag.
+  let pressX = 0;
+  let pressY = 0;
+  // The drag vector set by earlier presses on this same ball.
+  let carryX = 0;
+  let carryY = 0;
 
   const onDown = (event: PointerEvent): void => {
     if (pointerId !== null) {
@@ -36,7 +48,15 @@ export function listenForTouchGesture(
     pointerId = event.pointerId;
     target.setPointerCapture(event.pointerId);
     fullDragPx = Math.min(window.innerWidth, window.innerHeight) * CONTROL_FULL_DRAG_SCREEN_RATIO;
-    drag = { startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
+    pressX = event.clientX;
+    pressY = event.clientY;
+    // The drag is anchored as if the earlier presses never stopped: the aim continues.
+    drag = {
+      startX: event.clientX - carryX,
+      startY: event.clientY - carryY,
+      x: event.clientX,
+      y: event.clientY,
+    };
     options.emit({ type: 'touch', athleteId: options.athleteId });
     options.onDrag(drag, fullDragPx);
   };
@@ -60,10 +80,12 @@ export function listenForTouchGesture(
       return;
     }
     const released = { ...drag, x: event.clientX, y: event.clientY };
-    reset();
+    carryX = released.x - released.startX;
+    carryY = released.y - released.startY;
+    endPress();
     // A quick tap never confirms: no free aim. The player keeps aiming and can press again.
-    const dragged = Math.hypot(released.x - released.startX, released.y - released.startY);
-    if (dragged < fullDragPx * CONTROL_MIN_CONFIRM_DRAG_RATIO) {
+    const moved = Math.hypot(released.x - pressX, released.y - pressY);
+    if (moved < fullDragPx * CONTROL_MIN_CONFIRM_DRAG_RATIO) {
       return;
     }
     options.emit({
@@ -76,11 +98,11 @@ export function listenForTouchGesture(
 
   const onCancel = (event: PointerEvent): void => {
     if (event.pointerId === pointerId) {
-      reset();
+      endPress();
     }
   };
 
-  function reset(): void {
+  function endPress(): void {
     pointerId = null;
     drag = null;
     options.onDrag(null, fullDragPx);
@@ -90,10 +112,16 @@ export function listenForTouchGesture(
   target.addEventListener('pointermove', onMove);
   target.addEventListener('pointerup', onUp);
   target.addEventListener('pointercancel', onCancel);
-  return () => {
-    target.removeEventListener('pointerdown', onDown);
-    target.removeEventListener('pointermove', onMove);
-    target.removeEventListener('pointerup', onUp);
-    target.removeEventListener('pointercancel', onCancel);
+  return {
+    resetAimCarry() {
+      carryX = 0;
+      carryY = 0;
+    },
+    detach() {
+      target.removeEventListener('pointerdown', onDown);
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onCancel);
+    },
   };
 }

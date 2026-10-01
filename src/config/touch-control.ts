@@ -30,3 +30,12 @@ export const PREVIEW_PATH_MAX_S = 2.5;
 
 /** The aiming arc keeps one point every this many simulation steps. */
 export const PREVIEW_SAMPLE_EVERY_STEPS = 3;
+
+/**
+ * The aiming arc glides to the finger's aim with this time constant, in s (real time):
+ * fluid instead of stepping with each pointer event, short enough to feel immediate.
+ */
+export const AIM_DISPLAY_SMOOTHING_S = 0.06;
+
+/** Below this change of the shown aim per frame the arc is not recomputed. */
+export const AIM_DISPLAY_EPSILON = 0.002;

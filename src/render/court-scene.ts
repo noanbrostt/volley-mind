@@ -20,15 +20,15 @@ import type { AthleteId } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 import { type AimPath, createAimPath } from './aim-path';
 import { type AthleteViews, createAthleteViews } from './athlete-view';
-import { createContactCue } from './contact-cue';
+import { type ContactCue, createContactCue } from './contact-cue';
 import { createOverShoulderCamera } from './over-shoulder-camera';
 
 export interface CourtScene {
   readonly scene: Scene;
   readonly ball: Mesh;
   readonly athletes: AthleteViews;
-  /** Timing ring for the viewer's coming touch. */
-  readonly contactCue: Mesh;
+  /** Timing rings for the viewer's coming touch. */
+  readonly contactCue: ContactCue;
   /** Predicted arc of the ball while the viewer aims. */
   readonly aimPath: AimPath;
 }

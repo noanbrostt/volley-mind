@@ -31,13 +31,19 @@ export const ATHLETE_HEAD_RADIUS_M = 0.12;
 /** Mesh detail for athletes; kept low for weak phones. */
 export const ATHLETE_MESH_TESSELLATION = 12;
 
-// Timing cue: a ring at the player's contact point that shrinks onto the ball at the ideal
-// release moment (a visual aid, not a volleyball rule).
+// Timing cue, as in rhythm games: an approach ring shrinks onto a faint fixed hit ring at
+// the ideal moment (a visual aid, not a volleyball rule).
 export const CONTACT_CUE_COLOR_HEX = '#ffffff';
-/** The ring starts shrinking this long before the ideal moment, in s. */
+/** The approach ring starts shrinking this long before the ideal moment, in s. */
 export const CONTACT_CUE_SHRINK_S = 0.8;
-/** Ring diameter at the start of the shrink, in m; it ends at the ball's diameter. */
+/** Approach ring diameter at the start of the shrink, in m. */
 export const CONTACT_CUE_START_DIAMETER_M = 1.2;
+/** Size of the fixed hit ring, just around the ball, in m. */
+export const CONTACT_CUE_HIT_DIAMETER_M = 0.32;
+/** Opacity of the hit ring, 0–1: present but discreet. */
+export const CONTACT_CUE_HIT_ALPHA = 0.45;
+/** Once late, the approach ring keeps shrinking inside the hit ring down to this, in m. */
+export const CONTACT_CUE_MIN_DIAMETER_M = 0.08;
 /** Ring tube thickness, in m. */
 export const CONTACT_CUE_THICKNESS_M = 0.025;
 
@@ -48,8 +54,14 @@ export const AIM_PATH_POINTS = 40;
 /** Opacity of the stretch of the arc hidden behind someone (drawn faintly on top), 0–1. */
 export const AIM_PATH_HIDDEN_ALPHA = 0.25;
 
-// Aim target: a ring where the partner would meet the ball.
-export const AIM_TARGET_DIAMETER_M = 0.45;
-export const AIM_TARGET_THICKNESS_M = 0.03;
-export const AIM_TARGET_REACHABLE_COLOR_HEX = '#7dff9b';
-export const AIM_TARGET_UNREACHABLE_COLOR_HEX = '#ff6b5e';
+// Impact ripples: waves spreading where the ball would hit (the partner, or the floor).
+export const AIM_RIPPLE_COLOR_HEX = '#ffe36e';
+/** Waves on screen at once, evenly staggered. */
+export const AIM_RIPPLE_COUNT = 3;
+/** Time for one wave to grow and fade, in s (real time). */
+export const AIM_RIPPLE_PERIOD_S = 0.9;
+export const AIM_RIPPLE_MIN_DIAMETER_M = 0.1;
+export const AIM_RIPPLE_MAX_DIAMETER_M = 0.75;
+export const AIM_RIPPLE_THICKNESS_M = 0.025;
+/** Opacity of a wave as it starts, 0–1; it fades to nothing as it grows. */
+export const AIM_RIPPLE_MAX_ALPHA = 0.9;

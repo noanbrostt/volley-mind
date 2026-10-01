@@ -166,18 +166,17 @@ export function playDueTouch(
     : world;
 }
 
-export interface TouchPreviewTarget {
-  /** Where the partner would meet the ball, in m. */
+/** Where the ball would hit: on the partner, if they can play it, or else on the floor. */
+export interface TouchImpact {
   readonly point: Vec3;
-  /** Whether the partner can get to it (one or two steps from base, within reach). */
-  readonly reachable: boolean;
+  readonly surface: 'partner' | 'floor';
 }
 
 export interface TouchPreview {
   /** The predicted arc, from the hands to the partner (or to the floor if out of reach). */
   readonly path: readonly Vec3[];
-  /** Null when the partner could not play the ball at all. */
-  readonly target: TouchPreviewTarget | null;
+  /** Null when the ball flies past the preview horizon without hitting anything. */
+  readonly impact: TouchImpact | null;
 }
 
 /**
@@ -219,20 +218,27 @@ export function previewTouch(
   // The partner will be back on base by the time the ball arrives.
   const waiting = { ...receiver, position: receiver.basePosition, velocity: Vec3.ZERO };
   const plan = planTouch(waiting, nextActionAfter(incoming.action), launched, physics, dt);
-  const target = plan
-    ? {
-        point: plan.contact.point,
-        reachable: isWithinReach(
-          Vec3.distance(reachableSpot(waiting, plan.standPosition), plan.standPosition),
-        ),
-      }
-    : null;
+  const reachable =
+    plan !== null &&
+    isWithinReach(Vec3.distance(reachableSpot(waiting, plan.standPosition), plan.standPosition));
+  const meeting = reachable ? plan : null;
+  const flight = flightPath(launched, meeting, dt);
+  const impact: TouchImpact | null = meeting
+    ? { point: meeting.contact.point, surface: 'partner' }
+    : flight.floorPoint
+      ? { point: flight.floorPoint, surface: 'floor' }
+      : null;
+  return { path: flight.points, impact };
+}
 
-  return { path: flightPath(launched, target?.reachable ? plan : null, dt), target };
+interface Flight {
+  readonly points: Vec3[];
+  /** Where the ball touches the floor (y = 0), if it does within the horizon. */
+  readonly floorPoint: Vec3 | null;
 }
 
 /** Sampled flight until the partner meets the ball (if they can) or it reaches the floor. */
-function flightPath(launched: BallState, meetingPlan: TouchPlan | null, dt: number): Vec3[] {
+function flightPath(launched: BallState, meetingPlan: TouchPlan | null, dt: number): Flight {
   const points: Vec3[] = [launched.position];
   const maxSteps = Math.round(
     Math.min(PREVIEW_PATH_MAX_S, meetingPlan?.contact.secondsFromNow ?? PREVIEW_PATH_MAX_S) / dt,
@@ -245,13 +251,13 @@ function flightPath(launched: BallState, meetingPlan: TouchPlan | null, dt: numb
       points.push(ball.position);
     }
     if (result.bounce) {
-      return points;
+      return { points, floorPoint: result.bounce.groundPoint };
     }
   }
   if (meetingPlan) {
     points.push(meetingPlan.contact.point);
   }
-  return points;
+  return { points, floorPoint: null };
 }
 
 /** The ball leaves the hands: judge the touch, send the ball and expect the partner's touch. */

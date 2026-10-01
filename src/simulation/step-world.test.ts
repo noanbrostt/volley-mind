@@ -316,17 +316,20 @@ describe('stepWorld: a player-controlled athlete', () => {
       expect(previewTouch(playerWorld(), ATHLETE_A_ID, IDEAL_AIM, DT)).toBeNull();
       const preview = previewTouch(untilHeld(), ATHLETE_A_ID, IDEAL_AIM, DT);
       expect(preview?.path.length).toBeGreaterThan(5);
-      expect(preview?.target?.reachable).toBe(true);
+      expect(preview?.impact?.surface).toBe('partner');
       const b = findAthlete(playerWorld(), ATHLETE_B_ID);
-      const target = preview?.target?.point ?? Vec3.ZERO;
+      const target = preview?.impact?.point ?? Vec3.ZERO;
       expect(
         Vec3.distance(Vec3.create(target.x, 0, target.z), b?.basePosition ?? Vec3.ZERO),
       ).toBeLessThan(0.6);
     });
 
-    it('marks the target out of reach when the aim goes far to the side', () => {
+    it('shows the impact on the floor when the aim goes out of the partner’s reach', () => {
       const wide = previewTouch(untilHeld(), ATHLETE_A_ID, { lateral: 1, force: 0.5 }, DT);
-      expect(wide?.target?.reachable ?? false).toBe(false);
+      expect(wide?.impact?.surface).toBe('floor');
+      expect(wide?.impact?.point.y).toBe(0);
+      const last = wide?.path[wide.path.length - 1];
+      expect(last?.y).toBeLessThan(0.3);
     });
   });
 });

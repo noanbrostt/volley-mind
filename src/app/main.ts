@@ -1,6 +1,10 @@
 import { SIMULATION_STEP_S } from '@config/simulation';
-import { AIM_SLOW_MOTION_SCALE } from '@config/touch-control';
-import { aimFromDrag, type Drag, idealDragLength } from '@input/drag-aim';
+import {
+  AIM_DISPLAY_EPSILON,
+  AIM_DISPLAY_SMOOTHING_S,
+  AIM_SLOW_MOTION_SCALE,
+} from '@config/touch-control';
+import { aimFromDrag, idealDragLength } from '@input/drag-aim';
 import { listenForTouchGesture } from '@input/touch-gesture';
 import { syncAthleteViews } from '@render/athlete-view';
 import { syncBallView } from '@render/ball-view';
@@ -44,24 +48,23 @@ const commands: WorldCommand[] = [];
 
 const aimGuide = createAimGuide(document.body);
 const feedback = createTouchFeedback(document.body, PLAYER_ATHLETE_ID);
-// The finger currently on the screen, if any: while it is down and the ball waits for the
-// player's aim, the game runs in slow motion and the predicted arc follows the drag.
-let activeDrag: Drag | null = null;
-let activeFullDragPx = 0;
-// The arc is recomputed at most once per frame, and only after the drag changed.
-let previewOutdated = false;
-listenForTouchGesture(canvas, {
+// The aim the player's finger sets, and the aim the arc shows: the shown one glides toward
+// the finger's (a short smoothing), so the arc and ripples move fluidly instead of stepping
+// with each pointer event. Commands always carry the finger's own aim.
+const fingerAim = { lateral: 0, force: 0 };
+const shownAim = { lateral: 0, force: 0 };
+let shownAimValid = false;
+const gesture = listenForTouchGesture(canvas, {
   athleteId: PLAYER_ATHLETE_ID,
   emit: (command) => commands.push(command),
   onDrag: (drag, fullDragPx) => {
-    activeDrag = drag;
-    activeFullDragPx = fullDragPx;
-    previewOutdated = drag !== null;
     if (!drag) {
       aimGuide.hide();
-      view.aimPath.hide();
       return;
     }
+    const aim = aimFromDrag(drag, fullDragPx);
+    fingerAim.lateral = aim.lateral;
+    fingerAim.force = aim.force;
     aimGuide.show(drag.startX, drag.startY, drag.x, drag.y, idealDragLength(fullDragPx));
   },
 });
@@ -89,13 +92,8 @@ engine.runRenderLoop(() => {
   }
   const aimTime = aimTimeLeft(runner.current, PLAYER_ATHLETE_ID, SIMULATION_STEP_S);
   aimGuide.setTimeLeft(aimTime ? aimTime.remainingS / aimTime.totalS : null);
-  if (!isAwaitingAim(runner.current, PLAYER_ATHLETE_ID)) {
-    view.aimPath.hide();
-  } else if (activeDrag && previewOutdated) {
-    const aim = aimFromDrag(activeDrag, activeFullDragPx);
-    view.aimPath.show(previewTouch(runner.current, PLAYER_ATHLETE_ID, aim, SIMULATION_STEP_S));
-    previewOutdated = false;
-  }
+  updateAimPreview(frameSeconds);
+  view.aimPath.animate(frameSeconds);
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
@@ -103,3 +101,31 @@ engine.runRenderLoop(() => {
   view.scene.render();
   devTools?.onFrame(engine.getFps(), frameSeconds);
 });
+
+/** Keeps the aiming arc and ripples on the (smoothed) aim while the ball waits for it. */
+function updateAimPreview(frameSeconds: number): void {
+  if (!isAwaitingAim(runner.current, PLAYER_ATHLETE_ID)) {
+    view.aimPath.hide();
+    shownAimValid = false;
+    fingerAim.lateral = 0;
+    fingerAim.force = 0;
+    gesture.resetAimCarry();
+    return;
+  }
+  let changed = !shownAimValid;
+  if (shownAimValid) {
+    const blend = 1 - Math.exp(-frameSeconds / AIM_DISPLAY_SMOOTHING_S);
+    const lateralStep = (fingerAim.lateral - shownAim.lateral) * blend;
+    const forceStep = (fingerAim.force - shownAim.force) * blend;
+    changed = Math.abs(lateralStep) + Math.abs(forceStep) > AIM_DISPLAY_EPSILON;
+    shownAim.lateral += lateralStep;
+    shownAim.force += forceStep;
+  } else {
+    shownAim.lateral = fingerAim.lateral;
+    shownAim.force = fingerAim.force;
+    shownAimValid = true;
+  }
+  if (changed) {
+    view.aimPath.show(previewTouch(runner.current, PLAYER_ATHLETE_ID, shownAim, SIMULATION_STEP_S));
+  }
+}

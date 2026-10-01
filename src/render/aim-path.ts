@@ -5,32 +5,43 @@ import { CreateLines } from '@babylonjs/core/Meshes/Builders/linesBuilder';
 import { CreateTorus } from '@babylonjs/core/Meshes/Builders/torusBuilder';
 import type { LinesMesh } from '@babylonjs/core/Meshes/linesMesh';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import {
   AIM_PATH_COLOR_HEX,
   AIM_PATH_HIDDEN_ALPHA,
   AIM_PATH_POINTS,
-  AIM_TARGET_DIAMETER_M,
-  AIM_TARGET_REACHABLE_COLOR_HEX,
-  AIM_TARGET_THICKNESS_M,
-  AIM_TARGET_UNREACHABLE_COLOR_HEX,
+  AIM_RIPPLE_COLOR_HEX,
+  AIM_RIPPLE_COUNT,
+  AIM_RIPPLE_MAX_ALPHA,
+  AIM_RIPPLE_MAX_DIAMETER_M,
+  AIM_RIPPLE_MIN_DIAMETER_M,
+  AIM_RIPPLE_PERIOD_S,
+  AIM_RIPPLE_THICKNESS_M,
 } from '@config/court-scene';
 import type { Vec3 } from '@core/vec3';
 import type { TouchPreview } from '@simulation/touch-flow';
 import { OVERLAY_RENDERING_GROUP } from './overlay-rendering-group';
 
-const TARGET_TESSELLATION = 32;
+const RIPPLE_TESSELLATION = 32;
 
 export interface AimPath {
-  /** Draws the predicted arc and the target on the partner; null hides them. */
+  /** Draws the predicted arc and the impact ripples; null hides them. */
   show(preview: TouchPreview | null): void;
   hide(): void;
+  /** Advances the ripple animation; call once per frame with the real frame time. */
+  animate(frameSeconds: number): void;
+}
+
+interface Ripple {
+  readonly ring: Mesh;
+  readonly material: StandardMaterial;
 }
 
 /**
  * The aiming aid. The arc is drawn twice: normally (hidden where something stands in front)
- * and faintly on top, so a stretch behind the partner reads as behind. A ring marks where
- * the partner would meet the ball: green when they can play it, red when they cannot.
+ * and faintly on top, so a stretch behind the partner reads as behind. Where the ball would
+ * hit — the partner, or else the floor — ripples spread on that surface.
  */
 export function createAimPath(scene: Scene): AimPath {
   // Babylon updates a line in place only with the same point count: resample into a buffer.
@@ -41,29 +52,17 @@ export function createAimPath(scene: Scene): AimPath {
   ghost.alpha = AIM_PATH_HIDDEN_ALPHA;
   ghost.renderingGroupId = OVERLAY_RENDERING_GROUP;
 
-  const target = CreateTorus(
-    'aim-target',
-    {
-      diameter: AIM_TARGET_DIAMETER_M,
-      thickness: AIM_TARGET_THICKNESS_M,
-      tessellation: TARGET_TESSELLATION,
-    },
-    scene,
+  const impact = new TransformNode('aim-impact', scene);
+  const rippleColor = Color3.FromHexString(AIM_RIPPLE_COLOR_HEX);
+  const ripples = Array.from({ length: AIM_RIPPLE_COUNT }, (_, i) =>
+    createRipple(`aim-ripple-${i}`, impact, rippleColor, scene),
   );
-  // Stand the ring up, facing back toward the player's camera.
-  target.rotation.x = Math.PI / 2;
-  const targetMaterial = new StandardMaterial('aim-target-material', scene);
-  targetMaterial.disableLighting = true;
-  target.material = targetMaterial;
-  target.isPickable = false;
-  target.renderingGroupId = OVERLAY_RENDERING_GROUP;
-  const reachableColor = Color3.FromHexString(AIM_TARGET_REACHABLE_COLOR_HEX);
-  const unreachableColor = Color3.FromHexString(AIM_TARGET_UNREACHABLE_COLOR_HEX);
+  let clock = 0;
 
   const hide = (): void => {
     solid.setEnabled(false);
     ghost.setEnabled(false);
-    target.setEnabled(false);
+    impact.setEnabled(false);
   };
   hide();
 
@@ -78,9 +77,36 @@ export function createAimPath(scene: Scene): AimPath {
       CreateLines('aim-path-hidden', { points: buffer, instance: ghost }, scene);
       solid.setEnabled(true);
       ghost.setEnabled(true);
-      showTarget(target, targetMaterial, preview, reachableColor, unreachableColor);
+      if (!preview.impact) {
+        impact.setEnabled(false);
+        return;
+      }
+      const { point, surface } = preview.impact;
+      impact.position.set(point.x, point.y, point.z);
+      // Tori lie flat (floor); stood up they face the player's camera (partner).
+      impact.rotation.x = surface === 'floor' ? 0 : Math.PI / 2;
+      impact.setEnabled(true);
     },
     hide,
+    animate(frameSeconds) {
+      if (!impact.isEnabled()) {
+        return;
+      }
+      clock = (clock + frameSeconds) % AIM_RIPPLE_PERIOD_S;
+      for (let i = 0; i < ripples.length; i++) {
+        const ripple = ripples[i];
+        if (!ripple) {
+          continue;
+        }
+        // Evenly staggered waves, each growing and fading over one period.
+        const phase = (clock / AIM_RIPPLE_PERIOD_S + i / ripples.length) % 1;
+        const diameter =
+          AIM_RIPPLE_MIN_DIAMETER_M +
+          (AIM_RIPPLE_MAX_DIAMETER_M - AIM_RIPPLE_MIN_DIAMETER_M) * phase;
+        ripple.ring.scaling.set(diameter, 1, diameter);
+        ripple.material.alpha = AIM_RIPPLE_MAX_ALPHA * (1 - phase);
+      }
+    },
   };
 }
 
@@ -91,21 +117,20 @@ function createLine(name: string, points: Vector3[], color: Color3, scene: Scene
   return lines;
 }
 
-function showTarget(
-  target: Mesh,
-  material: StandardMaterial,
-  preview: TouchPreview,
-  reachableColor: Color3,
-  unreachableColor: Color3,
-): void {
-  if (!preview.target) {
-    target.setEnabled(false);
-    return;
-  }
-  const { point, reachable } = preview.target;
-  target.position.set(point.x, point.y, point.z);
-  material.emissiveColor = reachable ? reachableColor : unreachableColor;
-  target.setEnabled(true);
+function createRipple(name: string, parent: TransformNode, color: Color3, scene: Scene): Ripple {
+  const ring = CreateTorus(
+    name,
+    { diameter: 1, thickness: AIM_RIPPLE_THICKNESS_M, tessellation: RIPPLE_TESSELLATION },
+    scene,
+  );
+  const material = new StandardMaterial(`${name}-material`, scene);
+  material.emissiveColor = color;
+  material.disableLighting = true;
+  ring.material = material;
+  ring.isPickable = false;
+  ring.renderingGroupId = OVERLAY_RENDERING_GROUP;
+  ring.parent = parent;
+  return { ring, material };
 }
 
 /** Spreads `path` evenly (by index) over the fixed buffer, interpolating between points. */
