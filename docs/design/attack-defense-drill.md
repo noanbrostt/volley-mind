@@ -41,9 +41,10 @@ Controle (decidido pelo Noan depois de jogar: tempo e direção separados), com 
 
 ### Peixinho
 
-- Só acontece na **defesa**. Um levantamento ou um ataque que precisariam de peixinho quebram o loop.
-- A bola tenta o **mesmo destino** da defesa (alta, no colega), mas com **qualidade bem menor**, porque é uma bola difícil.
-- Usa o atributo de **manchete** (ver `athletes.md`), junto com o de defesa.
+- Vale em **qualquer ação** (defesa, levantamento ou ataque): num jogo a gente impede a bola de cair no chão a todo momento, não só na defesa.
+- **Alcance:** metade a mais que o da defesa. Se o atleta defende até cerca de 2 m da base, o peixinho chega a cerca de 3 m.
+- A bola tenta o **mesmo destino** da ação, mas com **qualidade bem menor**, porque é uma bola difícil. No ataque, ela sai num arco suave até o colega, como uma caixinha.
+- Usa o atributo de **manchete** (ver `athletes.md`), junto com o da ação.
 - Depois do peixinho o atleta fica **cerca de 1 s** no chão se recuperando; só então caminha de volta para a base.
 
 ## Sequência

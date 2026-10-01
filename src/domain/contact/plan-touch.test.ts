@@ -1,8 +1,8 @@
-import { ATHLETE_STEP_REACH_M, DIVE_CONTACT_HEIGHT_M } from '@config/athlete';
-import { TOUCH_POSITION_TOLERANCE_M } from '@config/touch';
+import { DIVE_CONTACT_HEIGHT_M, DIVE_REACH_RATIO } from '@config/athlete';
 import { Vec3 } from '@core/vec3';
 import { type AthleteState, createAthlete } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
+import { TOUCH_REACH_M } from '@domain/athlete/reach';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import type { BallState } from '@domain/ball/ball-state';
 import { solveLaunchByApex, solveLaunchBySpeed } from '@domain/ball/solve-launch';
@@ -69,11 +69,11 @@ describe('planTouch for digs and sets', () => {
     expect(plan?.hardReasons).toEqual([]);
   });
 
-  it('bumps a set that lands far from the body (sets never dive)', () => {
-    const wide = Vec3.add(contactPoint(athlete, 'overhead'), Vec3.create(2.2, 0, 0));
-    const plan = planTouch(athlete, 'set', ballTo(wide, 4), physics, DT);
+  it('bumps a low set that lands far from the body but within the steps', () => {
+    const wide = Vec3.add(contactPoint(athlete, 'bump'), Vec3.create(1.8, 0, 0));
+    const plan = planTouch(athlete, 'set', ballTo(wide, 1.6, Vec3.create(0, 1.2, 3)), physics, DT);
     expect(plan?.technique).toBe('bump');
-    expect(plan?.badBallReasons).toContain('far');
+    expect(plan?.hardReasons).toContain('far');
   });
 
   it('bumps a ball the athlete cannot reach in time', () => {
@@ -97,7 +97,7 @@ describe('planTouch for digs and sets', () => {
   });
 });
 
-describe('planTouch: the dive (digs only)', () => {
+describe('planTouch: the dive', () => {
   const farDig = (): BallState => {
     const wide = Vec3.add(athlete.basePosition, Vec3.create(2.8, DIVE_CONTACT_HEIGHT_M, 0.3));
     return ballTo(wide, 3.5);
@@ -110,11 +110,28 @@ describe('planTouch: the dive (digs only)', () => {
     expect(plan?.badBallReasons).toContain('far');
     // The feet stay within the steps; the stretch does the rest.
     const feetFromBase = Vec3.distance(plan?.standPosition ?? Vec3.ZERO, athlete.basePosition);
-    expect(feetFromBase).toBeLessThanOrEqual(ATHLETE_STEP_REACH_M + TOUCH_POSITION_TOLERANCE_M);
+    expect(feetFromBase).toBeLessThanOrEqual(TOUCH_REACH_M + 1e-9);
   });
 
-  it('never dives for a set', () => {
-    expect(planTouch(athlete, 'set', farDig(), physics, DT)?.technique).not.toBe('dive');
+  it('dives for any action: sets and attacks too (Noan)', () => {
+    expect(planTouch(athlete, 'set', farDig(), physics, DT)?.technique).toBe('dive');
+    expect(planTouch(athlete, 'attack', farDig(), physics, DT)?.technique).toBe('dive');
+  });
+
+  it('reaches half again as far as a normal touch, and no farther', () => {
+    const edge = TOUCH_REACH_M * DIVE_REACH_RATIO;
+    const justIn = Vec3.add(
+      athlete.basePosition,
+      Vec3.create(edge - 0.1, DIVE_CONTACT_HEIGHT_M, 0),
+    );
+    const justOut = Vec3.add(
+      athlete.basePosition,
+      Vec3.create(edge + 0.2, DIVE_CONTACT_HEIGHT_M, 0),
+    );
+    expect(planTouch(athlete, 'dig', ballTo(justIn, 3.5), physics, DT)?.technique).toBe('dive');
+    expect(planTouch(athlete, 'dig', ballTo(justOut, 3.5), physics, DT)?.technique).not.toBe(
+      'dive',
+    );
   });
 
   it('cannot dive farther than steps plus the stretch', () => {
@@ -137,7 +154,7 @@ describe('planTouch for attacks', () => {
   });
 
   it('plays a far set as a roll shot from the spike position', () => {
-    const wide = Vec3.add(contactPoint(athlete, 'spike'), Vec3.create(2.2, 0, 0));
+    const wide = Vec3.add(contactPoint(athlete, 'spike'), Vec3.create(1.8, 0, 0));
     const plan = planTouch(athlete, 'attack', ballTo(wide, 4.1), physics, DT);
     expect(plan?.technique).toBe('roll-shot');
     expect(plan?.badBallReasons).toContain('far');

@@ -52,10 +52,11 @@ export function touchTargetFor(
       // Aimed at the defender's body, at bump height.
       return {
         point: contactPoint(standing, 'bump'),
+        // Only a spike is driven; a roll shot, or a dive saving the ball, goes in a soft arc.
         trajectory:
-          technique === 'roll-shot'
-            ? { kind: 'arc', rise: ROLL_SHOT_RISE_M }
-            : { kind: 'drive', speed: ATTACK_CONTROLLED_SPEED_MPS },
+          technique === 'spike'
+            ? { kind: 'drive', speed: ATTACK_CONTROLLED_SPEED_MPS }
+            : { kind: 'arc', rise: ROLL_SHOT_RISE_M },
       };
   }
 }

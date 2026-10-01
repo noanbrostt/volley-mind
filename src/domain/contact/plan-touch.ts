@@ -1,9 +1,9 @@
-import { ATHLETE_STEP_REACH_M, DIVE_CONTACT_HEIGHT_M, DIVE_EXTENSION_M } from '@config/athlete';
-import { TOUCH_POSITION_TOLERANCE_M } from '@config/touch';
+import { ATHLETE_STEP_REACH_M, DIVE_CONTACT_HEIGHT_M } from '@config/athlete';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
 import { timeToReach } from '@domain/athlete/move-athlete';
+import { DIVE_EXTENSION_M, TOUCH_REACH_M } from '@domain/athlete/reach';
 import type { BallPhysics } from '@domain/ball/ball-physics';
 import type { BallState } from '@domain/ball/ball-state';
 import { type BallCrossing, predictCrossing } from '@domain/ball/predict-crossing';
@@ -39,8 +39,8 @@ interface Assessment {
 
 /**
  * How the athlete will play the coming ball in the attack-defense drill (Noan's rules):
- * overhead first for digs and sets, bump when the ball is bad, and a dive for a dig beyond
- * one or two steps; spike for a good attack ball, roll shot to the partner when it is bad.
+ * overhead first for digs and sets, bump when the ball is bad; spike for a good attack ball,
+ * roll shot to the partner when it is bad; and a dive for any ball beyond one or two steps.
  * Null when the ball cannot be played at all.
  */
 export function planTouch(
@@ -76,8 +76,8 @@ export function planTouch(
       : check(fallback, heightOf(fallback));
   const idealReasons: readonly BadBallReason[] = ideal ? ideal.reasons : ['low'];
 
-  // Noan: the dive is for digs only, when not even a bump can be reached with the steps.
-  if (action === 'dig' && (!played || isBeyondSteps(athlete, played.standPosition))) {
+  // Noan: a dive for any action, when the ball cannot be reached with the steps.
+  if (!played || isBeyondSteps(athlete, played.standPosition)) {
     const dive = assessDive(athlete, ball, physics, stepSeconds);
     if (dive) {
       return {
@@ -113,10 +113,7 @@ export function standPositionFor(
 
 /** Whether standing there is out of reach even after one or two steps from the base. */
 function isBeyondSteps(athlete: AthleteState, standPosition: Vec3): boolean {
-  return (
-    Vec3.distance(standPosition, athlete.basePosition) >
-    ATHLETE_STEP_REACH_M + TOUCH_POSITION_TOLERANCE_M
-  );
+  return Vec3.distance(standPosition, athlete.basePosition) > TOUCH_REACH_M;
 }
 
 /**

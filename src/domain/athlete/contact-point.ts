@@ -2,7 +2,6 @@ import {
   BUMP_CONTACT_FORWARD_M,
   BUMP_CONTACT_HEIGHT_RATIO,
   DIVE_CONTACT_HEIGHT_M,
-  DIVE_EXTENSION_M,
   OVERHEAD_CONTACT_FORWARD_M,
   OVERHEAD_CONTACT_HEIGHT_RATIO,
   SPIKE_CONTACT_DOMINANT_SIDE_M,
@@ -12,6 +11,7 @@ import {
 import { Vec3 } from '@core/vec3';
 import type { Technique } from '@domain/contact/technique';
 import { type AthleteState, forwardOf, rightOf } from './athlete-state';
+import { DIVE_EXTENSION_M } from './reach';
 
 interface ContactOffset {
   readonly heightRatio: number;
