@@ -18,13 +18,15 @@ export interface AimGuide {
 }
 
 /**
- * Overlay drawn while the player drags to aim: a line from where the finger went down to
- * where it is, and a dashed ring at the drag length of the ideal force. Updated only on
- * pointer moves, never per frame.
+ * Overlay for aiming: while the finger drags, a line from where it went down to where it is
+ * and a dashed ring at the drag length of the ideal force; while the ball waits for the aim
+ * (finger down or not), a countdown ring where the finger last went down.
  */
 export function createAimGuide(parent: HTMLElement): AimGuide {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.classList.add('aim-guide');
+  const drag = document.createElementNS(SVG_NS, 'g');
+  drag.classList.add('aim-guide__drag');
   const ring = document.createElementNS(SVG_NS, 'circle');
   ring.classList.add('aim-guide__ideal');
   const line = document.createElementNS(SVG_NS, 'line');
@@ -36,12 +38,13 @@ export function createAimGuide(parent: HTMLElement): AimGuide {
   countdown.classList.add('aim-guide__countdown');
   countdown.setAttribute('r', String(COUNTDOWN_RADIUS_PX));
   countdown.setAttribute('stroke-dasharray', String(COUNTDOWN_CIRCUMFERENCE_PX));
-  svg.append(ring, countdown, line, tip);
+  drag.append(ring, line, tip);
+  svg.append(countdown, drag);
   parent.append(svg);
 
   return {
     show(startX, startY, x, y, idealLengthPx) {
-      svg.classList.add('aim-guide--visible');
+      drag.classList.add('aim-guide__drag--visible');
       setAttributes(ring, { cx: startX, cy: startY, r: idealLengthPx });
       setAttributes(countdown, { cx: startX, cy: startY });
       // Start the drain at the top of the circle.
@@ -50,7 +53,7 @@ export function createAimGuide(parent: HTMLElement): AimGuide {
       setAttributes(tip, { cx: x, cy: y });
     },
     hide() {
-      svg.classList.remove('aim-guide--visible');
+      drag.classList.remove('aim-guide__drag--visible');
     },
     setTimeLeft(fraction) {
       countdown.classList.toggle('aim-guide__countdown--hidden', fraction === null);

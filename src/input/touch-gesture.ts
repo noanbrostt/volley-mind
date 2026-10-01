@@ -1,4 +1,7 @@
-import { CONTROL_FULL_DRAG_SCREEN_RATIO } from '@config/touch-control';
+import {
+  CONTROL_FULL_DRAG_SCREEN_RATIO,
+  CONTROL_MIN_CONFIRM_DRAG_RATIO,
+} from '@config/touch-control';
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import type { WorldCommand } from '@simulation/world-command';
 import { aimFromDrag, type Drag } from './drag-aim';
@@ -13,9 +16,10 @@ export interface TouchGestureOptions {
 }
 
 /**
- * One thumb: the finger going down is the moment of the touch; dragging aims (the game
- * slows down meanwhile, and each move updates the aim) and lifting the finger confirms it.
- * Only the first finger counts. Returns a detach function.
+ * One thumb: the first finger down is the moment of the touch; dragging aims (each move
+ * updates the aim) and lifting after a real drag confirms it. A quick tap confirms nothing:
+ * the player may press and drag again while the aiming time lasts. Only the first finger
+ * counts. Returns a detach function.
  */
 export function listenForTouchGesture(
   target: HTMLElement,
@@ -57,6 +61,11 @@ export function listenForTouchGesture(
     }
     const released = { ...drag, x: event.clientX, y: event.clientY };
     reset();
+    // A quick tap never confirms: no free aim. The player keeps aiming and can press again.
+    const dragged = Math.hypot(released.x - released.startX, released.y - released.startY);
+    if (dragged < fullDragPx * CONTROL_MIN_CONFIRM_DRAG_RATIO) {
+      return;
+    }
     options.emit({
       type: 'aim',
       athleteId: options.athleteId,

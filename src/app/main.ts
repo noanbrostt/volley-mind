@@ -8,7 +8,7 @@ import { syncContactCue } from '@render/contact-cue';
 import { createCourtScene } from '@render/court-scene';
 import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
-import { aimTimeLeft, isAwaitingAim, previewTouchPath } from '@simulation/touch-flow';
+import { aimTimeLeft, isAwaitingAim, previewTouch } from '@simulation/touch-flow';
 import type { WorldCommand } from '@simulation/world-command';
 import { ATHLETE_A_ID, ATHLETE_B_ID, createWorld } from '@simulation/world-state';
 import { createAimGuide } from '@ui/aim-guide';
@@ -76,7 +76,9 @@ if (import.meta.env.DEV) {
 
 engine.runRenderLoop(() => {
   const frameSeconds = engine.getDeltaTime() / MILLISECONDS_PER_SECOND;
-  const aiming = activeDrag !== null && isAwaitingAim(runner.current, PLAYER_ATHLETE_ID);
+  // Slow motion lasts the whole aiming time, finger down or not: a quick tap leaves room to
+  // press and drag again.
+  const aiming = isAwaitingAim(runner.current, PLAYER_ATHLETE_ID);
   const gameSeconds = aiming ? frameSeconds * AIM_SLOW_MOTION_SCALE : frameSeconds;
   const advance = advanceSimulation(runner, gameSeconds, commands);
   runner = advance.runner;
@@ -91,7 +93,7 @@ engine.runRenderLoop(() => {
     view.aimPath.hide();
   } else if (activeDrag && previewOutdated) {
     const aim = aimFromDrag(activeDrag, activeFullDragPx);
-    view.aimPath.show(previewTouchPath(runner.current, PLAYER_ATHLETE_ID, aim, SIMULATION_STEP_S));
+    view.aimPath.show(previewTouch(runner.current, PLAYER_ATHLETE_ID, aim, SIMULATION_STEP_S));
     previewOutdated = false;
   }
 

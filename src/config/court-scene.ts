@@ -45,3 +45,11 @@ export const CONTACT_CUE_THICKNESS_M = 0.025;
 export const AIM_PATH_COLOR_HEX = '#ffe36e';
 /** Points used to draw the arc (fixed, so the line updates in place). */
 export const AIM_PATH_POINTS = 40;
+/** Opacity of the stretch of the arc hidden behind someone (drawn faintly on top), 0–1. */
+export const AIM_PATH_HIDDEN_ALPHA = 0.25;
+
+// Aim target: a ring where the partner would meet the ball.
+export const AIM_TARGET_DIAMETER_M = 0.45;
+export const AIM_TARGET_THICKNESS_M = 0.03;
+export const AIM_TARGET_REACHABLE_COLOR_HEX = '#7dff9b';
+export const AIM_TARGET_UNREACHABLE_COLOR_HEX = '#ff6b5e';

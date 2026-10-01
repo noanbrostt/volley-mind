@@ -19,11 +19,15 @@ import {
   startHold,
   timingErrorAt,
 } from '@domain/contact/incoming-touch';
-import { planTouch } from '@domain/contact/plan-touch';
+import { planTouch, type TouchPlan } from '@domain/contact/plan-touch';
 import { resolveTouch } from '@domain/contact/resolve-touch';
 import { NO_AIM, type TouchAim } from '@domain/contact/touch-aim';
 import { isWithinReach, touchQuality } from '@domain/contact/touch-quality';
-import { nextActionAfter, partnerOf } from '@domain/drills/attack-defense/drill-state';
+import {
+  nextActionAfter,
+  partnerOf,
+  reachableSpot,
+} from '@domain/drills/attack-defense/drill-state';
 import type { WorldCommand } from './world-command';
 import type { WorldEvent } from './world-event';
 import { findAthlete, type WorldState } from './world-state';
@@ -162,25 +166,39 @@ export function playDueTouch(
     : world;
 }
 
+export interface TouchPreviewTarget {
+  /** Where the partner would meet the ball, in m. */
+  readonly point: Vec3;
+  /** Whether the partner can get to it (one or two steps from base, within reach). */
+  readonly reachable: boolean;
+}
+
+export interface TouchPreview {
+  /** The predicted arc, from the hands to the partner (or to the floor if out of reach). */
+  readonly path: readonly Vec3[];
+  /** Null when the partner could not play the ball at all. */
+  readonly target: TouchPreviewTarget | null;
+}
+
 /**
- * The arc the ball would fly if it left now with `aim`, without the scatter of imperfect
- * quality: the aiming aid shown to the player. Empty when `athleteId` has no committed touch.
+ * What the ball would do if it left now with `aim`, without the scatter of imperfect
+ * quality: the aiming aid shown to the player. Null when `athleteId` has no committed touch.
  */
-export function previewTouchPath(
+export function previewTouch(
   world: WorldState,
   athleteId: AthleteId,
   aim: TouchAim,
   dt: number,
-): readonly Vec3[] {
+): TouchPreview | null {
   const { drill } = world;
   if (drill.phase !== 'rally' || drill.incoming.athleteId !== athleteId) {
-    return [];
+    return null;
   }
   const { incoming } = drill;
   const toucher = findAthlete(world, athleteId);
   const receiver = partnerOf(world.athletes, athleteId);
   if (incoming.spent || !incoming.release || !incoming.plan || !toucher || !receiver) {
-    return [];
+    return null;
   }
   const contactPosition =
     incoming.holdStartTick !== null ? world.ball.position : incoming.plan.contact.point;
@@ -196,10 +214,30 @@ export function previewTouchPath(
     stepSeconds: dt,
     rng: world.rng,
   });
+  const launched: BallState = { position: contactPosition, velocity };
 
-  const points: Vec3[] = [contactPosition];
-  let ball: BallState = { position: contactPosition, velocity };
-  const maxSteps = Math.round(PREVIEW_PATH_MAX_S / dt);
+  // The partner will be back on base by the time the ball arrives.
+  const waiting = { ...receiver, position: receiver.basePosition, velocity: Vec3.ZERO };
+  const plan = planTouch(waiting, nextActionAfter(incoming.action), launched, physics, dt);
+  const target = plan
+    ? {
+        point: plan.contact.point,
+        reachable: isWithinReach(
+          Vec3.distance(reachableSpot(waiting, plan.standPosition), plan.standPosition),
+        ),
+      }
+    : null;
+
+  return { path: flightPath(launched, target?.reachable ? plan : null, dt), target };
+}
+
+/** Sampled flight until the partner meets the ball (if they can) or it reaches the floor. */
+function flightPath(launched: BallState, meetingPlan: TouchPlan | null, dt: number): Vec3[] {
+  const points: Vec3[] = [launched.position];
+  const maxSteps = Math.round(
+    Math.min(PREVIEW_PATH_MAX_S, meetingPlan?.contact.secondsFromNow ?? PREVIEW_PATH_MAX_S) / dt,
+  );
+  let ball = launched;
   for (let step = 1; step <= maxSteps; step++) {
     const result = stepBall(ball, physics, dt);
     ball = result.ball;
@@ -207,8 +245,11 @@ export function previewTouchPath(
       points.push(ball.position);
     }
     if (result.bounce) {
-      break;
+      return points;
     }
+  }
+  if (meetingPlan) {
+    points.push(meetingPlan.contact.point);
   }
   return points;
 }

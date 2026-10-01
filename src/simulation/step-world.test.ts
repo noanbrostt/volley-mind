@@ -8,7 +8,7 @@ import { uniformAttributes } from '@domain/athlete/attributes';
 import { IDEAL_AIM } from '@domain/contact/touch-aim';
 import { describe, expect, it } from 'vitest';
 import { stepWorld } from './step-world';
-import { aimTimeLeft, previewTouchPath } from './touch-flow';
+import { aimTimeLeft, previewTouch } from './touch-flow';
 import type { WorldCommand } from './world-command';
 import type { WorldEvent } from './world-event';
 import {
@@ -312,17 +312,21 @@ describe('stepWorld: a player-controlled athlete', () => {
       expect(aimTimeLeft(run(held, AIM_HOLD_MAX_S + 2 * DT).world, ATHLETE_A_ID, DT)).toBeNull();
     });
 
-    it('previews the arc to the partner once committed, and nothing before', () => {
-      expect(previewTouchPath(playerWorld(), ATHLETE_A_ID, IDEAL_AIM, DT)).toEqual([]);
-      const path = previewTouchPath(untilHeld(), ATHLETE_A_ID, IDEAL_AIM, DT);
-      expect(path.length).toBeGreaterThan(5);
+    it('previews the arc and the partner as a reachable target once committed', () => {
+      expect(previewTouch(playerWorld(), ATHLETE_A_ID, IDEAL_AIM, DT)).toBeNull();
+      const preview = previewTouch(untilHeld(), ATHLETE_A_ID, IDEAL_AIM, DT);
+      expect(preview?.path.length).toBeGreaterThan(5);
+      expect(preview?.target?.reachable).toBe(true);
       const b = findAthlete(playerWorld(), ATHLETE_B_ID);
-      const closest = Math.min(
-        ...path.map((point) =>
-          Vec3.distance(Vec3.create(point.x, 0, point.z), b?.basePosition ?? Vec3.ZERO),
-        ),
-      );
-      expect(closest).toBeLessThan(0.6);
+      const target = preview?.target?.point ?? Vec3.ZERO;
+      expect(
+        Vec3.distance(Vec3.create(target.x, 0, target.z), b?.basePosition ?? Vec3.ZERO),
+      ).toBeLessThan(0.6);
+    });
+
+    it('marks the target out of reach when the aim goes far to the side', () => {
+      const wide = previewTouch(untilHeld(), ATHLETE_A_ID, { lateral: 1, force: 0.5 }, DT);
+      expect(wide?.target?.reachable ?? false).toBe(false);
     });
   });
 });

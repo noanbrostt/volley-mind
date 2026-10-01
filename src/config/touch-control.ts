@@ -4,6 +4,12 @@
 /** Drag length that means full force, as a fraction of the screen's shorter side. */
 export const CONTROL_FULL_DRAG_SCREEN_RATIO = 0.35;
 
+/**
+ * Lifting the finger confirms the aim only after a real drag of at least this fraction of
+ * the full drag: a quick tap never confirms (no free aim), the player can press and drag again.
+ */
+export const CONTROL_MIN_CONFIRM_DRAG_RATIO = 0.08;
+
 /** Sideways drag that means full lateral aim, as a fraction of the full (force) drag. */
 export const CONTROL_FULL_LATERAL_DRAG_RATIO = 0.6;
 
