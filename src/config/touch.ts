@@ -62,3 +62,6 @@ export const ATTACK_CONTROLLED_SPEED_MPS = 12;
 
 /** Arc used when a driven ball cannot reach its target at the drawn speed, in m. */
 export const TOUCH_FALLBACK_RISE_M = 1;
+
+/** Quality multiplier for a dive (Noan: same target, much lower quality), 0–1. */
+export const DIVE_QUALITY_FACTOR = 0.6;

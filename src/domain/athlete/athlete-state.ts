@@ -5,6 +5,14 @@ import { type AthleteAttributes, uniformAttributes } from './attributes';
 export type AthleteId = string;
 export type DominantArm = 'right' | 'left';
 
+/** After a dive the athlete lies on the floor for a while before moving again. */
+export interface AthleteRecovery {
+  /** Simulation tick at which the athlete can move again. */
+  readonly untilTick: number;
+  /** Unit vector of the dive, along the floor: which way the athlete lies. */
+  readonly direction: Vec3;
+}
+
 /**
  * Athlete as plain, serializable data. World axes: y up; an athlete with facing 0 looks
  * toward +z and has +x on their right.
@@ -22,6 +30,8 @@ export interface AthleteState {
   readonly heightM: number;
   readonly dominantArm: DominantArm;
   readonly attributes: AthleteAttributes;
+  /** Set while getting up after a dive; null otherwise. */
+  readonly recovery: AthleteRecovery | null;
 }
 
 export interface NewAthlete {
@@ -41,6 +51,7 @@ export function createAthlete({ id, basePosition, facing }: NewAthlete): Athlete
     heightM: ATHLETE_DEFAULT_HEIGHT_M,
     dominantArm: 'right',
     attributes: uniformAttributes(ATHLETE_DEFAULT_ATTRIBUTE),
+    recovery: null,
   };
 }
 

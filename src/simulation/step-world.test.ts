@@ -1,3 +1,4 @@
+import { DIVE_CONTACT_HEIGHT_M, DIVE_RECOVERY_S } from '@config/athlete';
 import { DRILL_FIRST_TOSS_DELAY_S, DRILL_PARTNER_DISTANCE_M } from '@config/attack-defense-drill';
 import { SIMULATION_STEP_S } from '@config/simulation';
 import { AIM_HOLD_MAX_S } from '@config/touch';
@@ -167,6 +168,31 @@ describe('stepWorld: the attack-defense drill', () => {
     }
   });
 
+  it('keeps a diver down for the recovery, then lets them move again', () => {
+    let world = drillWorld({ attribute: 30, seed: 2 });
+    let diverId: AthleteId | null = null;
+    for (let i = 0; i < Math.round(300 / DT) && !diverId; i++) {
+      const step = stepWorld(world, [], DT);
+      world = step.world;
+      diverId =
+        eventsOf(step.events, 'ball-touched').find((t) => t.technique === 'dive')?.athleteId ??
+        null;
+    }
+    if (!diverId) {
+      throw new Error('no dive happened');
+    }
+    const diver = findAthlete(world, diverId);
+    const until = diver?.recovery?.untilTick ?? 0;
+    // The touch happened on the step that ended at this tick.
+    expect(until - (world.tick - 1)).toBe(Math.round(DIVE_RECOVERY_S / DT));
+    while (world.tick < until) {
+      world = stepWorld(world, [], DT).world;
+      expect(findAthlete(world, diverId)?.position).toEqual(diver?.position);
+    }
+    world = stepWorld(world, [], DT).world;
+    expect(findAthlete(world, diverId)?.recovery).toBeNull();
+  });
+
   it('is deterministic for the same seed', () => {
     const first = run(drillWorld({ seed: 7 }), 30);
     const second = run(drillWorld({ seed: 7 }), 30);
@@ -324,8 +350,15 @@ describe('stepWorld: a player-controlled athlete', () => {
       ).toBeLessThan(0.6);
     });
 
+    it('previews a dive when the aim goes wide but within a dive', () => {
+      const dive = previewTouch(untilHeld(), ATHLETE_A_ID, { lateral: 1, force: 0.5 }, DT);
+      expect(dive?.impact?.surface).toBe('partner');
+      expect(dive?.impact?.point.y).toBeCloseTo(DIVE_CONTACT_HEIGHT_M, 6);
+    });
+
     it('shows the impact on the floor when the aim goes out of the partner’s reach', () => {
-      const wide = previewTouch(untilHeld(), ATHLETE_A_ID, { lateral: 1, force: 0.5 }, DT);
+      // Strong and wide: past even a dive (a medium wide ball is now saved by one).
+      const wide = previewTouch(untilHeld(), ATHLETE_A_ID, { lateral: 1, force: 1 }, DT);
       expect(wide?.impact?.surface).toBe('floor');
       expect(wide?.impact?.point.y).toBe(0);
       const last = wide?.path[wide.path.length - 1];

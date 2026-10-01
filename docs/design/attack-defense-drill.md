@@ -39,6 +39,13 @@ Controle (decidido pelo Noan depois de jogar: tempo e direção separados), com 
 - Bola alta não exige pressa: o atleta pode "enrolar" para chegar embaixo dela. Ele pode chegar adiantado, mas nem sempre com a mesma antecedência, o que dá naturalidade.
 - Se a bola chega mais longe que isso, o atleta pode fazer um **peixinho**. Depois do peixinho, o **tempo de recuperação** para voltar à posição base é maior.
 
+### Peixinho
+
+- Só acontece na **defesa**. Um levantamento ou um ataque que precisariam de peixinho quebram o loop.
+- A bola tenta o **mesmo destino** da defesa (alta, no colega), mas com **qualidade bem menor**, porque é uma bola difícil.
+- Usa o atributo de **manchete** (ver `athletes.md`), junto com o de defesa.
+- Depois do peixinho o atleta fica **cerca de 1 s** no chão se recuperando; só então caminha de volta para a base.
+
 ## Sequência
 
 1. A ataca em B.

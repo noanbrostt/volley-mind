@@ -13,8 +13,16 @@ import {
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 
-/** One root node per athlete, standing at the feet; body and head hang from it. */
-export type AthleteViews = readonly TransformNode[];
+/**
+ * One view per athlete: the root stands at the feet and turns with the athlete; the pose
+ * node under it tilts the body and head down to lie on the floor after a dive.
+ */
+export interface AthleteView {
+  readonly root: TransformNode;
+  readonly pose: TransformNode;
+}
+
+export type AthleteViews = readonly AthleteView[];
 
 const FALLBACK_COLOR_HEX = '#cccccc';
 
@@ -41,18 +49,30 @@ export function syncAthleteViews(
     if (!view || !from || !to) {
       continue;
     }
-    view.position.set(
+    view.root.position.set(
       from.position.x + (to.position.x - from.position.x) * alpha,
       0,
       from.position.z + (to.position.z - from.position.z) * alpha,
     );
-    // Babylon's yaw matches the domain's: facing 0 looks toward +z with +x on the right.
-    view.rotation.y = to.facing;
+    const { recovery } = to;
+    if (recovery) {
+      // Lying stretched out along the dive: turn toward it and tip the body forward.
+      view.root.rotation.y = Math.atan2(recovery.direction.x, recovery.direction.z);
+      view.pose.rotation.x = Math.PI / 2;
+      view.pose.position.y = ATHLETE_BODY_RADIUS_M;
+    } else {
+      // Babylon's yaw matches the domain's: facing 0 looks toward +z with +x on the right.
+      view.root.rotation.y = to.facing;
+      view.pose.rotation.x = 0;
+      view.pose.position.y = 0;
+    }
   }
 }
 
-function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string): TransformNode {
+function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string): AthleteView {
   const root = new TransformNode(`athlete-${athlete.id}`, scene);
+  const pose = new TransformNode(`athlete-${athlete.id}-pose`, scene);
+  pose.parent = root;
   const material = new StandardMaterial(`athlete-${athlete.id}-material`, scene);
   material.diffuseColor = Color3.FromHexString(colorHex);
   material.specularColor = Color3.Black();
@@ -65,7 +85,7 @@ function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string
   );
   body.position.y = bodyHeight / 2;
   body.material = material;
-  body.parent = root;
+  body.parent = pose;
 
   const head = CreateSphere(
     `athlete-${athlete.id}-head`,
@@ -74,9 +94,9 @@ function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string
   );
   head.position.y = bodyHeight + ATHLETE_HEAD_RADIUS_M;
   head.material = material;
-  head.parent = root;
+  head.parent = pose;
 
   root.position.set(athlete.position.x, 0, athlete.position.z);
   root.rotation.y = athlete.facing;
-  return root;
+  return { root, pose };
 }

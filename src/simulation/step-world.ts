@@ -108,7 +108,12 @@ function breakLoop(
  * to them, pacing themselves to be in place a little early when the ball is high. After a
  * touch, whoever went to fetch the ball walks back to base.
  */
-function footwork(world: WorldState, athlete: AthleteState, dt: number): AthleteState {
+function footwork(world: WorldState, current: AthleteState, dt: number): AthleteState {
+  // After a dive the athlete stays down until the recovery ends (Noan: about 1 s).
+  if (current.recovery && world.tick < current.recovery.untilTick) {
+    return current;
+  }
+  const athlete: AthleteState = current.recovery ? { ...current, recovery: null } : current;
   // Going back to base is never urgent (Noan): a walk, not a run.
   const returnSpeed = ATHLETE_RETURN_WALK_SPEED_MPS;
   if (world.drill.phase === 'broken') {

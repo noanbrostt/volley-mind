@@ -41,3 +41,14 @@ export const BUMP_CONTACT_FORWARD_M = 0.45;
 export const SPIKE_CONTACT_HEIGHT_RATIO = 1.33;
 export const SPIKE_CONTACT_FORWARD_M = 0.15;
 export const SPIKE_CONTACT_DOMINANT_SIDE_M = 0.25;
+
+// Dive (peixinho): only for digs in the drill. All values are initial tuning.
+
+/** Height of the ball center when a diving athlete meets it, in m: low, near the floor. */
+export const DIVE_CONTACT_HEIGHT_M = 0.4;
+
+/** How far past the feet a diving athlete's arms reach along the dive, in m. */
+export const DIVE_EXTENSION_M = 1.3;
+
+/** Time on the floor after a dive before the athlete can move again, in s (Noan: about 1). */
+export const DIVE_RECOVERY_S = 1;

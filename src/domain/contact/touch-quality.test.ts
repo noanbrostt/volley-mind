@@ -1,5 +1,6 @@
 import {
   BAD_BALL_QUALITY_FACTOR,
+  DIVE_QUALITY_FACTOR,
   TOUCH_POSITION_TOLERANCE_M,
   TOUCH_SKILL_FLOOR,
   TOUCH_TIMING_WINDOW_S,
@@ -63,6 +64,13 @@ describe('touchQuality', () => {
     const overhead = touchQuality(goodSetterWeakBump, 'set', 'overhead', false, perfect);
     const bump = touchQuality(goodSetterWeakBump, 'set', 'bump', false, perfect);
     expect(bump).toBeLessThan(overhead);
+  });
+
+  it('makes a dive much harder, using the bump attribute (athletes.md)', () => {
+    const dive = touchQuality(best, 'dig', 'dive', false, perfect);
+    expect(dive).toBeCloseTo(DIVE_QUALITY_FACTOR, 12);
+    const weakBump = { ...uniformAttributes(100), bump: 0 };
+    expect(touchQuality(weakBump, 'dig', 'dive', false, perfect)).toBeLessThan(dive);
   });
 
   it('uses only the attack attribute for spikes and roll shots (athletes.md)', () => {

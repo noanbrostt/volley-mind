@@ -1,6 +1,7 @@
 import {
   AIM_QUALITY_PENALTY,
   BAD_BALL_QUALITY_FACTOR,
+  DIVE_QUALITY_FACTOR,
   TOUCH_POSITION_TOLERANCE_M,
   TOUCH_SKILL_FLOOR,
   TOUCH_TIMING_WINDOW_S,
@@ -47,7 +48,9 @@ export function touchQuality(
   const aim = clamp01(1 - aimDeviation(execution.aim) * AIM_QUALITY_PENALTY);
   const skill =
     TOUCH_SKILL_FLOOR + (1 - TOUCH_SKILL_FLOOR) * skillFor(attributes, action, technique);
-  return timing * position * aim * skill * (badBall ? BAD_BALL_QUALITY_FACTOR : 1);
+  const difficulty =
+    (badBall ? BAD_BALL_QUALITY_FACTOR : 1) * (technique === 'dive' ? DIVE_QUALITY_FACTOR : 1);
+  return timing * position * aim * skill * difficulty;
 }
 
 /** athletes.md: spike and roll shot use the attack attribute only. */
@@ -58,7 +61,9 @@ function skillFor(attributes: AthleteAttributes, action: Action, technique: Tech
       return attributeFraction(attributes.attack);
     case 'overhead':
       return (attributeFraction(attributes[action]) + attributeFraction(attributes.overhead)) / 2;
+    // athletes.md: the dive uses the bump attribute.
     case 'bump':
+    case 'dive':
       return (attributeFraction(attributes[action]) + attributeFraction(attributes.bump)) / 2;
   }
 }

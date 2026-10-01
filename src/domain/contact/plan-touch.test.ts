@@ -1,3 +1,5 @@
+import { ATHLETE_STEP_REACH_M, DIVE_CONTACT_HEIGHT_M } from '@config/athlete';
+import { TOUCH_POSITION_TOLERANCE_M } from '@config/touch';
 import { Vec3 } from '@core/vec3';
 import { type AthleteState, createAthlete } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
@@ -67,9 +69,9 @@ describe('planTouch for digs and sets', () => {
     expect(plan?.hardReasons).toEqual([]);
   });
 
-  it('bumps a ball that lands far from the body', () => {
+  it('bumps a set that lands far from the body (sets never dive)', () => {
     const wide = Vec3.add(contactPoint(athlete, 'overhead'), Vec3.create(2.2, 0, 0));
-    const plan = planTouch(athlete, 'dig', ballTo(wide, 4), physics, DT);
+    const plan = planTouch(athlete, 'set', ballTo(wide, 4), physics, DT);
     expect(plan?.technique).toBe('bump');
     expect(plan?.badBallReasons).toContain('far');
   });
@@ -92,6 +94,32 @@ describe('planTouch for digs and sets', () => {
       velocity: Vec3.create(0, 0, -1),
     };
     expect(planTouch(athlete, 'dig', rolling, physics, DT)).toBeNull();
+  });
+});
+
+describe('planTouch: the dive (digs only)', () => {
+  const farDig = (): BallState => {
+    const wide = Vec3.add(athlete.basePosition, Vec3.create(2.8, DIVE_CONTACT_HEIGHT_M, 0.3));
+    return ballTo(wide, 3.5);
+  };
+
+  it('dives for a dig beyond one or two steps, low near the floor', () => {
+    const plan = planTouch(athlete, 'dig', farDig(), physics, DT);
+    expect(plan?.technique).toBe('dive');
+    expect(plan?.contact.point.y).toBeCloseTo(DIVE_CONTACT_HEIGHT_M, 6);
+    expect(plan?.badBallReasons).toContain('far');
+    // The feet stay within the steps; the stretch does the rest.
+    const feetFromBase = Vec3.distance(plan?.standPosition ?? Vec3.ZERO, athlete.basePosition);
+    expect(feetFromBase).toBeLessThanOrEqual(ATHLETE_STEP_REACH_M + TOUCH_POSITION_TOLERANCE_M);
+  });
+
+  it('never dives for a set', () => {
+    expect(planTouch(athlete, 'set', farDig(), physics, DT)?.technique).not.toBe('dive');
+  });
+
+  it('cannot dive farther than steps plus the stretch', () => {
+    const tooFar = Vec3.add(athlete.basePosition, Vec3.create(5, DIVE_CONTACT_HEIGHT_M, 0));
+    expect(planTouch(athlete, 'dig', ballTo(tooFar, 3.5), physics, DT)?.technique).not.toBe('dive');
   });
 });
 

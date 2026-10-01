@@ -1,6 +1,8 @@
 import {
   BUMP_CONTACT_FORWARD_M,
   BUMP_CONTACT_HEIGHT_RATIO,
+  DIVE_CONTACT_HEIGHT_M,
+  DIVE_EXTENSION_M,
   OVERHEAD_CONTACT_FORWARD_M,
   OVERHEAD_CONTACT_HEIGHT_RATIO,
   SPIKE_CONTACT_DOMINANT_SIDE_M,
@@ -24,7 +26,7 @@ const SPIKE_OFFSET: ContactOffset = {
   dominantSide: SPIKE_CONTACT_DOMINANT_SIDE_M,
 };
 
-const CONTACT_OFFSETS: Readonly<Record<Technique, ContactOffset>> = {
+const CONTACT_OFFSETS: Readonly<Record<Exclude<Technique, 'dive'>, ContactOffset>> = {
   overhead: {
     heightRatio: OVERHEAD_CONTACT_HEIGHT_RATIO,
     forward: OVERHEAD_CONTACT_FORWARD_M,
@@ -42,6 +44,14 @@ const CONTACT_OFFSETS: Readonly<Record<Technique, ContactOffset>> = {
 
 /** Where, in the world, the athlete's body meets the ball with this technique. */
 export function contactPoint(athlete: AthleteState, technique: Technique): Vec3 {
+  if (technique === 'dive') {
+    // Stretched out along the dive, arms near the floor (the dive direction is the
+    // caller's: see planTouch; along the facing here).
+    return Vec3.add(
+      Vec3.add(athlete.position, Vec3.scale(forwardOf(athlete.facing), DIVE_EXTENSION_M)),
+      Vec3.create(0, DIVE_CONTACT_HEIGHT_M, 0),
+    );
+  }
   const offset = CONTACT_OFFSETS[technique];
   const sideSign = athlete.dominantArm === 'right' ? 1 : -1;
   const horizontal = Vec3.add(

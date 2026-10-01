@@ -1,9 +1,13 @@
-import { ATHLETE_ARRIVAL_LEAD_MAX_S, ATHLETE_ARRIVAL_LEAD_MIN_S } from '@config/athlete';
+import {
+  ATHLETE_ARRIVAL_LEAD_MAX_S,
+  ATHLETE_ARRIVAL_LEAD_MIN_S,
+  DIVE_RECOVERY_S,
+} from '@config/athlete';
 import { PREVIEW_PATH_MAX_S, PREVIEW_SAMPLE_EVERY_STEPS } from '@config/touch-control';
 import { nextRange } from '@core/seeded-rng';
 import { Vec3 } from '@core/vec3';
 import { decideAiTouch } from '@domain/ai/decide-touch';
-import type { AthleteId } from '@domain/athlete/athlete-state';
+import { type AthleteId, type AthleteState, forwardOf } from '@domain/athlete/athlete-state';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import type { BallState } from '@domain/ball/ball-state';
 import { stepBall } from '@domain/ball/step-ball';
@@ -318,6 +322,14 @@ function sendBall(
     ...world,
     ball: { position: world.ball.position, velocity: resolution.velocity },
     rng: resolution.rng,
+    athletes:
+      plan.technique === 'dive'
+        ? world.athletes.map((athlete) =>
+            athlete.id === toucher.id
+              ? startDiveRecovery(athlete, world.ball.position, nowTick, dt)
+              : athlete,
+          )
+        : world.athletes,
   };
   return expectTouch(touched, receiver.id, nextActionAfter(incoming.action), nowTick, dt);
 }
@@ -354,5 +366,28 @@ export function aimTimeLeft(world: WorldState, athleteId: AthleteId, dt: number)
   return {
     remainingS: Math.max(0, (deadline - world.tick) * dt),
     totalS: (deadline - incoming.release.tick) * dt,
+  };
+}
+
+/** After the dive the athlete lies stretched toward the ball until the recovery ends. */
+function startDiveRecovery(
+  athlete: AthleteState,
+  ballPosition: Vec3,
+  nowTick: number,
+  dt: number,
+): AthleteState {
+  const toBall = Vec3.create(
+    ballPosition.x - athlete.position.x,
+    0,
+    ballPosition.z - athlete.position.z,
+  );
+  return {
+    ...athlete,
+    velocity: Vec3.ZERO,
+    recovery: {
+      untilTick: nowTick + Math.round(DIVE_RECOVERY_S / dt),
+      direction:
+        Vec3.lengthSquared(toBall) > 0 ? Vec3.normalize(toBall) : forwardOf(athlete.facing),
+    },
   };
 }

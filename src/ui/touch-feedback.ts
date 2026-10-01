@@ -12,6 +12,7 @@ const TECHNIQUE_LABELS: Readonly<Record<Technique, string>> = {
   bump: 'Manchete',
   spike: 'Cortada',
   'roll-shot': 'Caixinha',
+  dive: 'Peixinho',
 };
 
 const MISS_LABELS: Readonly<Record<TouchMissReason, string>> = {

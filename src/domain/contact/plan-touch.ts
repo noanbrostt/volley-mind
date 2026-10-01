@@ -1,4 +1,5 @@
-import { ATHLETE_STEP_REACH_M } from '@config/athlete';
+import { ATHLETE_STEP_REACH_M, DIVE_CONTACT_HEIGHT_M, DIVE_EXTENSION_M } from '@config/athlete';
+import { TOUCH_POSITION_TOLERANCE_M } from '@config/touch';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import { contactPoint } from '@domain/athlete/contact-point';
@@ -38,8 +39,9 @@ interface Assessment {
 
 /**
  * How the athlete will play the coming ball in the attack-defense drill (Noan's rules):
- * overhead first for digs and sets, bump when the ball is bad; spike for a good attack ball,
- * roll shot to the partner when it is bad. Null when the ball cannot be played at all.
+ * overhead first for digs and sets, bump when the ball is bad, and a dive for a dig beyond
+ * one or two steps; spike for a good attack ball, roll shot to the partner when it is bad.
+ * Null when the ball cannot be played at all.
  */
 export function planTouch(
   athlete: AthleteState,
@@ -72,10 +74,24 @@ export function planTouch(
     action === 'attack'
       ? (ideal ?? check(fallback, heightOf('overhead')))
       : check(fallback, heightOf(fallback));
+  const idealReasons: readonly BadBallReason[] = ideal ? ideal.reasons : ['low'];
+
+  // Noan: the dive is for digs only, when not even a bump can be reached with the steps.
+  if (action === 'dig' && (!played || isBeyondSteps(athlete, played.standPosition))) {
+    const dive = assessDive(athlete, ball, physics, stepSeconds);
+    if (dive) {
+      return {
+        technique: 'dive',
+        contact: dive.contact,
+        standPosition: dive.standPosition,
+        badBallReasons: [...new Set<BadBallReason>([...idealReasons, 'far'])],
+        hardReasons: dive.reasons,
+      };
+    }
+  }
   if (!played) {
     return null;
   }
-  const idealReasons: readonly BadBallReason[] = ideal ? ideal.reasons : ['low'];
   return {
     technique: fallback,
     contact: played.contact,
@@ -93,6 +109,46 @@ export function standPositionFor(
 ): Vec3 {
   const offset = contactPoint({ ...athlete, position: Vec3.ZERO }, technique);
   return Vec3.create(ballPoint.x - offset.x, 0, ballPoint.z - offset.z);
+}
+
+/** Whether standing there is out of reach even after one or two steps from the base. */
+function isBeyondSteps(athlete: AthleteState, standPosition: Vec3): boolean {
+  return (
+    Vec3.distance(standPosition, athlete.basePosition) >
+    ATHLETE_STEP_REACH_M + TOUCH_POSITION_TOLERANCE_M
+  );
+}
+
+/**
+ * A dive: the athlete runs to the edge of their steps and stretches out toward the ball,
+ * meeting it low near the floor. Null when even a dive cannot get there.
+ */
+function assessDive(
+  athlete: AthleteState,
+  ball: BallState,
+  physics: BallPhysics,
+  stepSeconds: number,
+): Assessment | null {
+  const contact = predictCrossing(ball, physics, stepSeconds, DIVE_CONTACT_HEIGHT_M);
+  if (!contact) {
+    return null;
+  }
+  const toBall = Vec3.create(
+    contact.point.x - athlete.basePosition.x,
+    0,
+    contact.point.z - athlete.basePosition.z,
+  );
+  const direction = Vec3.normalize(toBall);
+  const standPosition = Vec3.sub(
+    Vec3.create(contact.point.x, 0, contact.point.z),
+    Vec3.scale(direction, DIVE_EXTENSION_M),
+  );
+  if (isBeyondSteps(athlete, standPosition)) {
+    return null;
+  }
+  const travelSeconds = timeToReach(athlete, Vec3.distance(standPosition, athlete.position));
+  const reasons: HardReason[] = travelSeconds > contact.secondsFromNow ? ['late'] : [];
+  return { contact, standPosition, reasons };
 }
 
 function assess(
