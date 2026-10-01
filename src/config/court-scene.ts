@@ -21,6 +21,8 @@ export const CAMERA_HEIGHT_M = 2.4;
 export const CAMERA_SHOULDER_OFFSET_M = 0.6;
 /** Height on the partner the camera looks at, in m. */
 export const CAMERA_LOOK_HEIGHT_M = 1.3;
+/** How quickly the camera catches up with the athletes, in s: smooth, never jerky. */
+export const CAMERA_FOLLOW_SMOOTHING_S = 0.3;
 
 /** One color per athlete, in world order (A, then B). */
 export const ATHLETE_COLORS_HEX: readonly string[] = ['#3d7be0', '#e05a4f'];

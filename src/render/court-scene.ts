@@ -21,7 +21,7 @@ import type { WorldState } from '@simulation/world-state';
 import { type AimPath, createAimPath } from './aim-path';
 import { type AthleteViews, createAthleteViews } from './athlete-view';
 import { type ContactCue, createContactCue } from './contact-cue';
-import { createOverShoulderCamera } from './over-shoulder-camera';
+import { createOverShoulderCamera, type OverShoulderCamera } from './over-shoulder-camera';
 
 export interface CourtScene {
   readonly scene: Scene;
@@ -31,6 +31,7 @@ export interface CourtScene {
   readonly contactCue: ContactCue;
   /** Predicted arc of the ball while the viewer aims. */
   readonly aimPath: AimPath;
+  readonly camera: OverShoulderCamera;
 }
 
 /** Builds the court, the ball, the athletes and the camera behind the viewer's athlete. */
@@ -42,12 +43,7 @@ export function createCourtScene(
   const scene = new Scene(engine);
   scene.clearColor = Color4.FromColor3(Color3.FromHexString(GYM_BACKGROUND_COLOR_HEX));
 
-  const viewer = world.athletes.find((athlete) => athlete.id === viewerId);
-  const partner = world.athletes.find((athlete) => athlete.id !== viewerId);
-  if (!viewer || !partner) {
-    throw new Error(`The court scene needs the viewer "${viewerId}" and a partner`);
-  }
-  createOverShoulderCamera(scene, viewer, partner);
+  const camera = createOverShoulderCamera(scene, world, viewerId);
 
   const light = new HemisphericLight('ceiling-light', Vector3.Up(), scene);
   light.intensity = CEILING_LIGHT_INTENSITY;
@@ -72,6 +68,7 @@ export function createCourtScene(
     athletes: createAthleteViews(scene, world.athletes),
     contactCue: createContactCue(scene),
     aimPath: createAimPath(scene),
+    camera,
   };
 }
 

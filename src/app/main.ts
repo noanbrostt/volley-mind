@@ -105,6 +105,7 @@ engine.runRenderLoop(() => {
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
   syncContactCue(view.contactCue, runner.current, PLAYER_ATHLETE_ID, runner.alpha);
+  view.camera.update(runner.current, frameSeconds);
   view.scene.render();
   fpsCounter?.update(
     engine.getFps(),
