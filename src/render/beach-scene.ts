@@ -1,0 +1,66 @@
+import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
+import type { Engine } from '@babylonjs/core/Engines/engine';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { CreateGround } from '@babylonjs/core/Meshes/Builders/groundBuilder';
+import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { Scene } from '@babylonjs/core/scene';
+import { BALL_RADIUS_M } from '@config/ball';
+import {
+  BALL_COLOR_HEX,
+  BALL_MESH_SEGMENTS,
+  CAMERA_DISTANCE_M,
+  CAMERA_ORBIT_ANGLE_RAD,
+  CAMERA_TARGET_HEIGHT_M,
+  CAMERA_TILT_FROM_VERTICAL_RAD,
+  SAND_AREA_SIZE_M,
+  SAND_COLOR_HEX,
+  SKY_COLOR_HEX,
+  SKY_LIGHT_INTENSITY,
+} from '@config/beach-scene';
+
+export interface BeachScene {
+  readonly scene: Scene;
+  readonly ball: Mesh;
+}
+
+export function createBeachScene(engine: Engine): BeachScene {
+  const scene = new Scene(engine);
+  scene.clearColor = Color4.FromColor3(Color3.FromHexString(SKY_COLOR_HEX));
+
+  const camera = new ArcRotateCamera(
+    'camera',
+    CAMERA_ORBIT_ANGLE_RAD,
+    CAMERA_TILT_FROM_VERTICAL_RAD,
+    CAMERA_DISTANCE_M,
+    new Vector3(0, CAMERA_TARGET_HEIGHT_M, 0),
+    scene,
+  );
+  // The camera is fixed: touches belong to the game, not to orbiting.
+  camera.inputs.clear();
+
+  const light = new HemisphericLight('sky-light', Vector3.Up(), scene);
+  light.intensity = SKY_LIGHT_INTENSITY;
+
+  const sand = CreateGround('sand', { width: SAND_AREA_SIZE_M, height: SAND_AREA_SIZE_M }, scene);
+  sand.material = flatMaterial('sand-material', SAND_COLOR_HEX, scene);
+
+  const ball = CreateSphere(
+    'ball',
+    { diameter: BALL_RADIUS_M * 2, segments: BALL_MESH_SEGMENTS },
+    scene,
+  );
+  ball.material = flatMaterial('ball-material', BALL_COLOR_HEX, scene);
+
+  return { scene, ball };
+}
+
+function flatMaterial(name: string, colorHex: string, scene: Scene): StandardMaterial {
+  const material = new StandardMaterial(name, scene);
+  material.diffuseColor = Color3.FromHexString(colorHex);
+  material.specularColor = Color3.Black();
+  return material;
+}

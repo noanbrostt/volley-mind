@@ -1,0 +1,18 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #8fc9ec;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Touches drive the game; the browser must not pan, zoom or select. */
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
