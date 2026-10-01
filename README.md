@@ -6,6 +6,8 @@ O objetivo atual é o **aquecimento de ataque e defesa 1x1**: dois atletas, uma 
 
 Por enquanto existe a fundação: uma bola com física própria quicando na quadra. Tocar na tela relança a bola.
 
+**Jogar:** https://noanbrostt.github.io/volley-mind/ (publicado automaticamente a cada push na `main`, depois que tipos, lint e testes passam).
+
 ## Como rodar
 
 Requer Node 24.14 ou mais recente.
