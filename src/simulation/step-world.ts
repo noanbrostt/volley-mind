@@ -43,6 +43,10 @@ export function stepWorld(
   state = playDueTouch(state, now, dt, events);
   state = { ...state, athletes: state.athletes.map((athlete) => footwork(state, athlete, dt)) };
 
+  if (isBallHeld(state)) {
+    // The ball rests in the toucher's hands while they aim.
+    return { world: { ...state, tick: now + 1 }, events };
+  }
   const ballStep = stepBall(state.ball, DEFAULT_BALL_PHYSICS, dt);
   state = { ...state, ball: ballStep.ball, tick: now + 1 };
   if (ballStep.bounce) {
@@ -119,4 +123,12 @@ function footwork(world: WorldState, athlete: AthleteState, dt: number): Athlete
   const secondsLeft = (incoming.contactTick - world.tick) * dt - incoming.arrivalLeadS;
   const pace = paceSpeed(athlete, Vec3.distance(athlete.position, spot), secondsLeft);
   return moveAthleteToward(athlete, spot, dt, pace);
+}
+
+function isBallHeld(world: WorldState): boolean {
+  return (
+    world.drill.phase === 'rally' &&
+    !world.drill.incoming.spent &&
+    world.drill.incoming.holdStartTick !== null
+  );
 }

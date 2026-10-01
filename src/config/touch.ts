@@ -6,6 +6,12 @@
 /** Releasing this far from the ideal moment, early or late, is a missed touch, in s. */
 export const TOUCH_TIMING_WINDOW_S = 0.2;
 
+/**
+ * How long the ball may rest in the hands while the toucher chooses the aim, in game
+ * seconds (the player sees it in slow motion). Past it, the ball leaves with the ideal aim.
+ */
+export const AIM_HOLD_MAX_S = 0.4;
+
 /** Distance from the ideal standing spot at which positioning adds nothing, in m. */
 export const TOUCH_POSITION_TOLERANCE_M = 0.6;
 

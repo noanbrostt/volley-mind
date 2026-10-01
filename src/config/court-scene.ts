@@ -40,3 +40,8 @@ export const CONTACT_CUE_SHRINK_S = 0.8;
 export const CONTACT_CUE_START_DIAMETER_M = 1.2;
 /** Ring tube thickness, in m. */
 export const CONTACT_CUE_THICKNESS_M = 0.025;
+
+// Aiming aid: the predicted arc of the ball while the player aims.
+export const AIM_PATH_COLOR_HEX = '#ffe36e';
+/** Points used to draw the arc (fixed, so the line updates in place). */
+export const AIM_PATH_POINTS = 40;

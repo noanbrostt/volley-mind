@@ -6,14 +6,15 @@ import { aimFromDrag, type Drag } from './drag-aim';
 export interface TouchGestureOptions {
   /** The athlete the player controls. */
   readonly athleteId: AthleteId;
-  /** The touch command, sent the moment the finger lifts. */
+  /** The touch command when the finger goes down, the aim command when it lifts. */
   readonly emit: (command: WorldCommand) => void;
   /** The drag in progress (null when the finger lifts), for the aim guide. */
   readonly onDrag: (drag: Drag | null, fullDragPx: number) => void;
 }
 
 /**
- * One thumb: press anywhere, drag to aim, lift to touch the ball. Only the first finger
+ * One thumb: the finger going down is the moment of the touch; dragging aims (the game
+ * slows down meanwhile) and lifting the finger confirms the aim. Only the first finger
  * counts. Returns a detach function.
  */
 export function listenForTouchGesture(
@@ -32,6 +33,7 @@ export function listenForTouchGesture(
     target.setPointerCapture(event.pointerId);
     fullDragPx = Math.min(window.innerWidth, window.innerHeight) * CONTROL_FULL_DRAG_SCREEN_RATIO;
     drag = { startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY };
+    options.emit({ type: 'touch', athleteId: options.athleteId });
     options.onDrag(drag, fullDragPx);
   };
 
@@ -50,7 +52,7 @@ export function listenForTouchGesture(
     const released = { ...drag, x: event.clientX, y: event.clientY };
     reset();
     options.emit({
-      type: 'touch',
+      type: 'aim',
       athleteId: options.athleteId,
       aim: aimFromDrag(released, fullDragPx),
     });

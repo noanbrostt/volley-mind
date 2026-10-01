@@ -16,18 +16,15 @@ Em **quadra**. A quadra é sempre a preferência; a areia só entra no jogo depo
 
 O jogador humano controla um atleta (A) e a IA controla o outro (B).
 
-Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
+Controle (decidido pelo Noan depois de jogar: tempo e direção separados), com um polegar:
 
-- **Direção e força:** o jogador encosta o dedo e arrasta para mirar. A direção é para onde o corpo aponta e o comprimento do arrasto doseia a força.
-- **Tempo:** o toque na bola acontece quando o jogador **solta** o dedo. A precisão desse momento pesa na qualidade do toque.
+- **Tempo:** o toque na bola acontece quando o jogador **encosta** o dedo na tela. Um **anel** no ponto de contato encolhe até o tamanho da bola no instante ideal (ajuda visual, não regra).
+- **Câmera lenta:** depois de encostar, o jogo fica em câmera lenta enquanto o jogador mira. Quando a bola chega às mãos, ela espera a mira, mas não para sempre: esgotado o limite, sai com a mira ideal.
+- **Direção e força:** arrastando o dedo aparece a **linha de auxílio**, o arco que a bola vai fazer. Arrastar para cima aponta para o colega, inclinar mira para os lados e o comprimento do arrasto doseia a força. A linha mostra o caminho ideal da mira escolhida; a imprecisão do toque (tempo, posição, atributos) ainda espalha a bola.
+- **Soltar** o dedo confirma a mira.
+- Depois de cada toque aparece um retorno curto: técnica e tempo ("Toque · Perfeito!", "Manchete · Atrasado") ou o erro ("Cedo demais", "Não alcançou").
 - O atleta **se desloca sozinho** (com seus atributos de velocidade e leitura) e escolhe a **técnica** pela regra deste modo (toque com prioridade; manchete quando a bola vem ruim).
 - Controlar os passos e o peixinho com o outro polegar pode entrar depois, no 6x6.
-- Na prática (proposta de implementação, para o Noan avaliar jogando):
-  - arrastar **para cima** aponta para o colega; inclinar o arrasto mira para os lados;
-  - o comprimento do arrasto é a força, e a força ideal fica no anel tracejado do guia;
-  - só tocar, sem arrastar, vale como mira ideal;
-  - um **anel** no ponto de contato encolhe até o tamanho da bola no instante ideal de soltar (ajuda visual, não regra);
-  - depois de cada toque aparece um retorno curto: técnica e tempo ("Toque · Perfeito!", "Manchete · Atrasado") ou o erro ("Cedo demais", "Não alcançou").
 - **Câmera:** atrás do atleta do jogador, por cima do ombro, olhando para o colega.
 
 ## Posicionamento

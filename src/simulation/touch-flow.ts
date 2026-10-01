@@ -1,19 +1,26 @@
 import { ATHLETE_ARRIVAL_LEAD_MAX_S, ATHLETE_ARRIVAL_LEAD_MIN_S } from '@config/athlete';
+import { PREVIEW_PATH_MAX_S, PREVIEW_SAMPLE_EVERY_STEPS } from '@config/touch-control';
 import { nextRange } from '@core/seeded-rng';
 import { Vec3 } from '@core/vec3';
 import { decideAiTouch } from '@domain/ai/decide-touch';
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
+import type { BallState } from '@domain/ball/ball-state';
+import { stepBall } from '@domain/ball/step-ball';
 import type { Action } from '@domain/contact/action';
 import {
+  chooseAim,
   createIncomingTouch,
   hasWindowClosed,
+  isHoldExpired,
   isTouchDue,
   releaseTouch,
+  startHold,
   timingErrorAt,
 } from '@domain/contact/incoming-touch';
 import { planTouch } from '@domain/contact/plan-touch';
 import { resolveTouch } from '@domain/contact/resolve-touch';
+import { IDEAL_AIM, type TouchAim } from '@domain/contact/touch-aim';
 import { isWithinReach, touchQuality } from '@domain/contact/touch-quality';
 import { nextActionAfter, partnerOf } from '@domain/drills/attack-defense/drill-state';
 import type { WorldCommand } from './world-command';
@@ -60,7 +67,10 @@ export function expectTouch(
   };
 }
 
-/** A toucher lets go. Only the expected toucher counts, and only once per ball. */
+/**
+ * A toucher commits to the touch (with or without an aim) or, having committed, chooses the
+ * aim. Only the expected toucher counts, and only once per ball.
+ */
 export function applyTouchCommand(
   world: WorldState,
   command: WorldCommand,
@@ -72,7 +82,13 @@ export function applyTouchCommand(
   if (drill.phase !== 'rally' || drill.incoming.athleteId !== command.athleteId) {
     return world;
   }
-  const incoming = releaseTouch(drill.incoming, command.aim, nowTick, dt);
+  if (command.type === 'aim') {
+    return {
+      ...world,
+      drill: { phase: 'rally', incoming: chooseAim(drill.incoming, command.aim) },
+    };
+  }
+  const incoming = releaseTouch(drill.incoming, command.aim ?? null, nowTick, dt);
   if (incoming.spent && !drill.incoming.spent) {
     const reason = timingErrorAt(drill.incoming, nowTick, dt) < 0 ? 'early' : 'late';
     events.push({ type: 'touch-missed', tick: nowTick, athleteId: command.athleteId, reason });
@@ -81,8 +97,9 @@ export function applyTouchCommand(
 }
 
 /**
- * Plays the expected touch when it is due: judge its quality, send the ball to the partner
- * and expect the partner's touch. If nobody released in time, the chance is gone.
+ * Plays the expected touch when it is due. The athlete must be there at contact; then the
+ * ball leaves at once if the aim is known, or rests in the hands until it is (or until the
+ * hold limit, leaving with the ideal aim). If nobody committed in time, the chance is gone.
  */
 export function playDueTouch(
   world: WorldState,
@@ -105,22 +122,100 @@ export function playDueTouch(
     return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
   }
   const toucher = findAthlete(world, incoming.athleteId);
-  const receiver = partnerOf(world.athletes, incoming.athleteId);
   const { plan, release } = incoming;
-  if (!isTouchDue(incoming, nowTick) || !toucher || !receiver || !plan || !release) {
+  if (!isTouchDue(incoming, nowTick) || !toucher || !plan || !release) {
     return world;
   }
 
-  const positionErrorM = Vec3.distance(toucher.position, plan.standPosition);
-  if (!isWithinReach(positionErrorM)) {
-    // Touches are rules, but the athlete still has to be there: the ball goes by.
-    events.push({
-      type: 'touch-missed',
-      tick: nowTick,
-      athleteId: incoming.athleteId,
-      reason: 'out-of-reach',
-    });
-    return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
+  if (incoming.holdStartTick === null) {
+    // Touches are rules, but the athlete still has to be there at contact.
+    if (!isWithinReach(Vec3.distance(toucher.position, plan.standPosition))) {
+      events.push({
+        type: 'touch-missed',
+        tick: nowTick,
+        athleteId: incoming.athleteId,
+        reason: 'out-of-reach',
+      });
+      return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
+    }
+    if (!release.aim) {
+      return { ...world, drill: { phase: 'rally', incoming: startHold(incoming, nowTick) } };
+    }
+  }
+
+  const aim = release.aim ?? (isHoldExpired(incoming, nowTick, dt) ? IDEAL_AIM : null);
+  return aim ? sendBall(world, aim, nowTick, dt, events) : world;
+}
+
+/**
+ * The arc the ball would fly if it left now with `aim`, without the scatter of imperfect
+ * quality: the aiming aid shown to the player. Empty when `athleteId` has no committed touch.
+ */
+export function previewTouchPath(
+  world: WorldState,
+  athleteId: AthleteId,
+  aim: TouchAim,
+  dt: number,
+): readonly Vec3[] {
+  const { drill } = world;
+  if (drill.phase !== 'rally' || drill.incoming.athleteId !== athleteId) {
+    return [];
+  }
+  const { incoming } = drill;
+  const toucher = findAthlete(world, athleteId);
+  const receiver = partnerOf(world.athletes, athleteId);
+  if (incoming.spent || !incoming.release || !incoming.plan || !toucher || !receiver) {
+    return [];
+  }
+  const contactPosition =
+    incoming.holdStartTick !== null ? world.ball.position : incoming.plan.contact.point;
+  const { velocity } = resolveTouch({
+    contactPosition,
+    toucher,
+    receiver,
+    action: incoming.action,
+    technique: incoming.plan.technique,
+    aim,
+    quality: 1,
+    physics,
+    stepSeconds: dt,
+    rng: world.rng,
+  });
+
+  const points: Vec3[] = [contactPosition];
+  let ball: BallState = { position: contactPosition, velocity };
+  const maxSteps = Math.round(PREVIEW_PATH_MAX_S / dt);
+  for (let step = 1; step <= maxSteps; step++) {
+    const result = stepBall(ball, physics, dt);
+    ball = result.ball;
+    if (result.bounce || step % PREVIEW_SAMPLE_EVERY_STEPS === 0) {
+      points.push(ball.position);
+    }
+    if (result.bounce) {
+      break;
+    }
+  }
+  return points;
+}
+
+/** The ball leaves the hands: judge the touch, send the ball and expect the partner's touch. */
+function sendBall(
+  world: WorldState,
+  aim: TouchAim,
+  nowTick: number,
+  dt: number,
+  events: WorldEvent[],
+): WorldState {
+  const { drill } = world;
+  if (drill.phase !== 'rally') {
+    return world;
+  }
+  const { incoming } = drill;
+  const toucher = findAthlete(world, incoming.athleteId);
+  const receiver = partnerOf(world.athletes, incoming.athleteId);
+  const { plan, release } = incoming;
+  if (!toucher || !receiver || !plan || !release) {
+    return world;
   }
   const timingErrorS = timingErrorAt(incoming, release.tick, dt);
   const quality = touchQuality(
@@ -128,7 +223,11 @@ export function playDueTouch(
     incoming.action,
     plan.technique,
     plan.hardReasons.length > 0,
-    { timingErrorS, positionErrorM, aim: release.aim },
+    {
+      timingErrorS,
+      positionErrorM: Vec3.distance(toucher.position, plan.standPosition),
+      aim,
+    },
   );
   const resolution = resolveTouch({
     contactPosition: world.ball.position,
@@ -136,7 +235,7 @@ export function playDueTouch(
     receiver,
     action: incoming.action,
     technique: plan.technique,
-    aim: release.aim,
+    aim,
     quality,
     physics,
     stepSeconds: dt,
@@ -159,4 +258,16 @@ export function playDueTouch(
     rng: resolution.rng,
   };
   return expectTouch(touched, receiver.id, nextActionAfter(incoming.action), nowTick, dt);
+}
+
+/** Whether `athleteId` has committed to a touch and the ball now waits for their aim. */
+export function isAwaitingAim(world: WorldState, athleteId: AthleteId): boolean {
+  const { drill } = world;
+  return (
+    drill.phase === 'rally' &&
+    drill.incoming.athleteId === athleteId &&
+    !drill.incoming.spent &&
+    drill.incoming.release !== null &&
+    drill.incoming.release.aim === null
+  );
 }

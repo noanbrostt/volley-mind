@@ -18,6 +18,7 @@ import {
 } from '@config/court-scene';
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
+import { type AimPath, createAimPath } from './aim-path';
 import { type AthleteViews, createAthleteViews } from './athlete-view';
 import { createContactCue } from './contact-cue';
 import { createOverShoulderCamera } from './over-shoulder-camera';
@@ -28,6 +29,8 @@ export interface CourtScene {
   readonly athletes: AthleteViews;
   /** Timing ring for the viewer's coming touch. */
   readonly contactCue: Mesh;
+  /** Predicted arc of the ball while the viewer aims. */
+  readonly aimPath: AimPath;
 }
 
 /** Builds the court, the ball, the athletes and the camera behind the viewer's athlete. */
@@ -68,6 +71,7 @@ export function createCourtScene(
     ball,
     athletes: createAthleteViews(scene, world.athletes),
     contactCue: createContactCue(scene),
+    aimPath: createAimPath(scene),
   };
 }
 

@@ -10,8 +10,20 @@ export const CONTROL_DEADZONE_RATIO = 0.12;
 /** Drag angle away from straight up that means full lateral aim, in rad. */
 export const CONTROL_MAX_AIM_ANGLE_RAD = Math.PI / 4;
 
+/**
+ * Game speed while the player aims, after committing to the touch: a presentation-only
+ * slow motion (the simulation itself keeps its fixed steps).
+ */
+export const AIM_SLOW_MOTION_SCALE = 0.2;
+
 /** Release within this much of the ideal moment to see "Perfeito!", in s. */
 export const FEEDBACK_PERFECT_TIMING_S = 0.04;
 
 /** How long a touch feedback message stays on screen, in s. */
 export const FEEDBACK_VISIBLE_S = 0.9;
+
+/** How far ahead the aiming arc is drawn, in game s. */
+export const PREVIEW_PATH_MAX_S = 2.5;
+
+/** The aiming arc keeps one point every this many simulation steps. */
+export const PREVIEW_SAMPLE_EVERY_STEPS = 3;

@@ -1,5 +1,6 @@
 import { DRILL_FIRST_TOSS_DELAY_S, DRILL_PARTNER_DISTANCE_M } from '@config/attack-defense-drill';
 import { SIMULATION_STEP_S } from '@config/simulation';
+import { AIM_HOLD_MAX_S } from '@config/touch';
 import { Vec3 } from '@core/vec3';
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import { forwardOf } from '@domain/athlete/athlete-state';
@@ -7,6 +8,7 @@ import { uniformAttributes } from '@domain/athlete/attributes';
 import { IDEAL_AIM } from '@domain/contact/touch-aim';
 import { describe, expect, it } from 'vitest';
 import { stepWorld } from './step-world';
+import { previewTouchPath } from './touch-flow';
 import type { WorldCommand } from './world-command';
 import type { WorldEvent } from './world-event';
 import {
@@ -220,5 +222,58 @@ describe('stepWorld: a player-controlled athlete', () => {
     const withWrong = stepWorld(tossed, [wrong], DT);
     const without = stepWorld(tossed, [], DT);
     expect(withWrong).toEqual(without);
+  });
+
+  describe('committing first, aiming after (the player’s flow)', () => {
+    const commitOnTime = (world: WorldState): readonly WorldCommand[] => {
+      const { drill } = world;
+      const due =
+        drill.phase === 'rally' &&
+        drill.incoming.athleteId === ATHLETE_A_ID &&
+        world.tick === Math.round(drill.incoming.contactTick);
+      return due ? [{ type: 'touch', athleteId: ATHLETE_A_ID }] : [];
+    };
+
+    function untilHeld(): WorldState {
+      let world = playerWorld();
+      for (let i = 0; i < 300; i++) {
+        world = stepWorld(world, commitOnTime(world), DT).world;
+        if (world.drill.phase === 'rally' && world.drill.incoming.holdStartTick !== null) {
+          return world;
+        }
+      }
+      throw new Error('the ball never rested in the hands');
+    }
+
+    it('rests the ball in the hands while the player aims', () => {
+      const held = untilHeld();
+      const later = run(held, 0.2).world;
+      expect(later.ball.position).toEqual(held.ball.position);
+    });
+
+    it('sends the ball once the aim arrives', () => {
+      const held = untilHeld();
+      const aim: WorldCommand = { type: 'aim', athleteId: ATHLETE_A_ID, aim: IDEAL_AIM };
+      const { events } = stepWorld(held, [aim], DT);
+      expect(eventsOf(events, 'ball-touched')[0]?.athleteId).toBe(ATHLETE_A_ID);
+    });
+
+    it('sends the ball with the ideal aim when the hold runs out', () => {
+      const { events } = run(untilHeld(), AIM_HOLD_MAX_S + 2 * DT);
+      expect(eventsOf(events, 'ball-touched')[0]?.athleteId).toBe(ATHLETE_A_ID);
+    });
+
+    it('previews the arc to the partner once committed, and nothing before', () => {
+      expect(previewTouchPath(playerWorld(), ATHLETE_A_ID, IDEAL_AIM, DT)).toEqual([]);
+      const path = previewTouchPath(untilHeld(), ATHLETE_A_ID, IDEAL_AIM, DT);
+      expect(path.length).toBeGreaterThan(5);
+      const b = findAthlete(playerWorld(), ATHLETE_B_ID);
+      const closest = Math.min(
+        ...path.map((point) =>
+          Vec3.distance(Vec3.create(point.x, 0, point.z), b?.basePosition ?? Vec3.ZERO),
+        ),
+      );
+      expect(closest).toBeLessThan(0.6);
+    });
   });
 });

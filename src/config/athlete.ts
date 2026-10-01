@@ -24,7 +24,7 @@ export const ATHLETE_ARRIVAL_LEAD_MAX_S = 0.5;
 export const ATHLETE_RETURN_WALK_SPEED_MPS = 1.2;
 
 /** How far "one or two steps" reach from the base position, in m. */
-export const ATHLETE_STEP_REACH_M = 1.2;
+export const ATHLETE_STEP_REACH_M = 1.5;
 
 // Contact points per technique, relative to the athlete: heights as fractions of the
 // athlete's height, offsets in m along the facing direction and toward the dominant arm.
