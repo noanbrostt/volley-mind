@@ -30,3 +30,13 @@ export const ATHLETE_BODY_RADIUS_M = 0.22;
 export const ATHLETE_HEAD_RADIUS_M = 0.12;
 /** Mesh detail for athletes; kept low for weak phones. */
 export const ATHLETE_MESH_TESSELLATION = 12;
+
+// Timing cue: a ring at the player's contact point that shrinks onto the ball at the ideal
+// release moment (a visual aid, not a volleyball rule).
+export const CONTACT_CUE_COLOR_HEX = '#ffffff';
+/** The ring starts shrinking this long before the ideal moment, in s. */
+export const CONTACT_CUE_SHRINK_S = 0.8;
+/** Ring diameter at the start of the shrink, in m; it ends at the ball's diameter. */
+export const CONTACT_CUE_START_DIAMETER_M = 1.2;
+/** Ring tube thickness, in m. */
+export const CONTACT_CUE_THICKNESS_M = 0.025;

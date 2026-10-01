@@ -22,6 +22,12 @@ Controle escolhido pelo Noan (opção "tempo + direção"), com um polegar:
 - **Tempo:** o toque na bola acontece quando o jogador **solta** o dedo. A precisão desse momento pesa na qualidade do toque.
 - O atleta **se desloca sozinho** (com seus atributos de velocidade e leitura) e escolhe a **técnica** pela regra deste modo (toque com prioridade; manchete quando a bola vem ruim).
 - Controlar os passos e o peixinho com o outro polegar pode entrar depois, no 6x6.
+- Na prática (proposta de implementação, para o Noan avaliar jogando):
+  - arrastar **para cima** aponta para o colega; inclinar o arrasto mira para os lados;
+  - o comprimento do arrasto é a força, e a força ideal fica no anel tracejado do guia;
+  - só tocar, sem arrastar, vale como mira ideal;
+  - um **anel** no ponto de contato encolhe até o tamanho da bola no instante ideal de soltar (ajuda visual, não regra);
+  - depois de cada toque aparece um retorno curto: técnica e tempo ("Toque · Perfeito!", "Manchete · Atrasado") ou o erro ("Cedo demais", "Não alcançou").
 - **Câmera:** atrás do atleta do jogador, por cima do ombro, olhando para o colega.
 
 ## Posicionamento

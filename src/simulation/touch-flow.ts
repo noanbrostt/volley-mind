@@ -74,7 +74,8 @@ export function applyTouchCommand(
   }
   const incoming = releaseTouch(drill.incoming, command.aim, nowTick, dt);
   if (incoming.spent && !drill.incoming.spent) {
-    events.push({ type: 'touch-missed', tick: nowTick, athleteId: command.athleteId });
+    const reason = timingErrorAt(drill.incoming, nowTick, dt) < 0 ? 'early' : 'late';
+    events.push({ type: 'touch-missed', tick: nowTick, athleteId: command.athleteId, reason });
   }
   return { ...world, drill: { phase: 'rally', incoming } };
 }
@@ -95,7 +96,12 @@ export function playDueTouch(
   }
   const { incoming } = drill;
   if (hasWindowClosed(incoming, nowTick, dt)) {
-    events.push({ type: 'touch-missed', tick: nowTick, athleteId: incoming.athleteId });
+    events.push({
+      type: 'touch-missed',
+      tick: nowTick,
+      athleteId: incoming.athleteId,
+      reason: 'no-release',
+    });
     return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
   }
   const toucher = findAthlete(world, incoming.athleteId);
@@ -108,7 +114,12 @@ export function playDueTouch(
   const positionErrorM = Vec3.distance(toucher.position, plan.standPosition);
   if (!isWithinReach(positionErrorM)) {
     // Touches are rules, but the athlete still has to be there: the ball goes by.
-    events.push({ type: 'touch-missed', tick: nowTick, athleteId: incoming.athleteId });
+    events.push({
+      type: 'touch-missed',
+      tick: nowTick,
+      athleteId: incoming.athleteId,
+      reason: 'out-of-reach',
+    });
     return { ...world, drill: { phase: 'rally', incoming: { ...incoming, spent: true } } };
   }
   const timingErrorS = timingErrorAt(incoming, release.tick, dt);

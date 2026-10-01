@@ -1,10 +1,15 @@
+import { idealDragLength } from '@input/drag-aim';
+import { listenForTouchGesture } from '@input/touch-gesture';
 import { syncAthleteViews } from '@render/athlete-view';
 import { syncBallView } from '@render/ball-view';
+import { syncContactCue } from '@render/contact-cue';
 import { createCourtScene } from '@render/court-scene';
 import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
 import type { WorldCommand } from '@simulation/world-command';
 import { ATHLETE_A_ID, ATHLETE_B_ID, createWorld } from '@simulation/world-state';
+import { createAimGuide } from '@ui/aim-guide';
+import { createTouchFeedback } from '@ui/touch-feedback';
 import './app.css';
 import type { DevTools } from './dev-tools';
 
@@ -22,18 +27,31 @@ canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 const engine = createEngine(canvas);
 watchCanvasResize(engine);
 
-// The camera stands behind athlete A. For now the AI plays both athletes, so the drill can
-// be watched and tuned before the player takes A over.
-const VIEWER_ATHLETE_ID = ATHLETE_A_ID;
+// The player controls athlete A, with the camera behind them; the AI plays B.
+const PLAYER_ATHLETE_ID = ATHLETE_A_ID;
 const world = createWorld({
   // Only the session seed comes from outside the simulation; everything after is deterministic.
   seed: Math.floor(Math.random() * UINT32_RANGE),
-  aiAthleteIds: [ATHLETE_A_ID, ATHLETE_B_ID],
+  aiAthleteIds: [ATHLETE_B_ID],
 });
-const view = createCourtScene(engine, world, VIEWER_ATHLETE_ID);
+const view = createCourtScene(engine, world, PLAYER_ATHLETE_ID);
 
 let runner = createSimulationRunner(world);
-const NO_COMMANDS: readonly WorldCommand[] = [];
+const commands: WorldCommand[] = [];
+
+const aimGuide = createAimGuide(document.body);
+const feedback = createTouchFeedback(document.body, PLAYER_ATHLETE_ID);
+listenForTouchGesture(canvas, {
+  athleteId: PLAYER_ATHLETE_ID,
+  emit: (command) => commands.push(command),
+  onDrag: (drag, fullDragPx) => {
+    if (drag) {
+      aimGuide.show(drag.startX, drag.startY, drag.x, drag.y, idealDragLength(fullDragPx));
+    } else {
+      aimGuide.hide();
+    }
+  },
+});
 
 // Dev-only tools load through dynamic import so production bundles never contain them.
 let devTools: DevTools | null = null;
@@ -45,10 +63,17 @@ if (import.meta.env.DEV) {
 
 engine.runRenderLoop(() => {
   const frameSeconds = engine.getDeltaTime() / MILLISECONDS_PER_SECOND;
-  runner = advanceSimulation(runner, frameSeconds, NO_COMMANDS).runner;
+  const advance = advanceSimulation(runner, frameSeconds, commands);
+  runner = advance.runner;
+  // The runner copied what it needed; reuse the same array next frame.
+  commands.length = 0;
+  for (const event of advance.events) {
+    feedback.onEvent(event);
+  }
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
+  syncContactCue(view.contactCue, runner.current, PLAYER_ATHLETE_ID, runner.alpha);
   view.scene.render();
   devTools?.onFrame(engine.getFps(), frameSeconds);
 });

@@ -183,8 +183,19 @@ describe('stepWorld: a player-controlled athlete', () => {
 
   it('misses when the player never releases, and the loop breaks', () => {
     const { events } = run(playerWorld(), 5);
-    expect(eventsOf(events, 'touch-missed')[0]?.athleteId).toBe(ATHLETE_A_ID);
+    const missed = eventsOf(events, 'touch-missed')[0];
+    expect(missed?.athleteId).toBe(ATHLETE_A_ID);
+    expect(missed?.reason).toBe('no-release');
     expect(eventsOf(events, 'loop-broken').length).toBe(1);
+  });
+
+  it('spends the chance on a release far too early, and says so', () => {
+    const tossed = run(playerWorld(), DRILL_FIRST_TOSS_DELAY_S + DT).world;
+    const early: WorldCommand = { type: 'touch', athleteId: ATHLETE_A_ID, aim: IDEAL_AIM };
+    const { events } = stepWorld(tossed, [early], DT);
+    expect(eventsOf(events, 'touch-missed')).toEqual([
+      { type: 'touch-missed', tick: tossed.tick, athleteId: ATHLETE_A_ID, reason: 'early' },
+    ]);
   });
 
   it('plays the touch when the player releases at the right moment', () => {

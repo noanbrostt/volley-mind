@@ -19,12 +19,15 @@ import {
 import type { AthleteId } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 import { type AthleteViews, createAthleteViews } from './athlete-view';
+import { createContactCue } from './contact-cue';
 import { createOverShoulderCamera } from './over-shoulder-camera';
 
 export interface CourtScene {
   readonly scene: Scene;
   readonly ball: Mesh;
   readonly athletes: AthleteViews;
+  /** Timing ring for the viewer's coming touch. */
+  readonly contactCue: Mesh;
 }
 
 /** Builds the court, the ball, the athletes and the camera behind the viewer's athlete. */
@@ -60,7 +63,12 @@ export function createCourtScene(
   );
   ball.material = flatMaterial('ball-material', BALL_COLOR_HEX, scene);
 
-  return { scene, ball, athletes: createAthleteViews(scene, world.athletes) };
+  return {
+    scene,
+    ball,
+    athletes: createAthleteViews(scene, world.athletes),
+    contactCue: createContactCue(scene),
+  };
 }
 
 function flatMaterial(name: string, colorHex: string, scene: Scene): StandardMaterial {

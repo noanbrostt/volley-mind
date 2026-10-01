@@ -4,6 +4,9 @@ import type { Action } from '@domain/contact/action';
 import type { BadBallReason } from '@domain/contact/plan-touch';
 import type { Technique } from '@domain/contact/technique';
 
+/** Released too early or too late, never released, or could not get to the ball. */
+export type TouchMissReason = 'early' | 'late' | 'no-release' | 'out-of-reach';
+
 /** Facts the simulation reports after a step, for render, audio and UI to react to. */
 export type WorldEvent =
   | { readonly type: 'ball-bounced'; readonly tick: number; readonly bounce: BallBounce }
@@ -19,6 +22,11 @@ export type WorldEvent =
       readonly timingErrorS: number;
       readonly badBallReasons: readonly BadBallReason[];
     }
-  | { readonly type: 'touch-missed'; readonly tick: number; readonly athleteId: AthleteId }
+  | {
+      readonly type: 'touch-missed';
+      readonly tick: number;
+      readonly athleteId: AthleteId;
+      readonly reason: TouchMissReason;
+    }
   | { readonly type: 'loop-broken'; readonly tick: number; readonly restarterId: AthleteId }
   | { readonly type: 'loop-restarted'; readonly tick: number; readonly athleteId: AthleteId };
