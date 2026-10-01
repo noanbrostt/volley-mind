@@ -24,3 +24,6 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# Raw third-party asset packs (security-checked, CC0); only optimized outputs are committed
+asset-packs
