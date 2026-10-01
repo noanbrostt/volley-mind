@@ -3,7 +3,7 @@ import { type AthleteState, createAthlete } from '@domain/athlete/athlete-state'
 import { contactPoint } from '@domain/athlete/contact-point';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import type { BallState } from '@domain/ball/ball-state';
-import { solveLaunchByApex } from '@domain/ball/solve-launch';
+import { solveLaunchByApex, solveLaunchBySpeed } from '@domain/ball/solve-launch';
 import { describe, expect, it } from 'vitest';
 import { planTouch, standPositionFor } from './plan-touch';
 
@@ -42,6 +42,29 @@ describe('planTouch for digs and sets', () => {
     const plan = planTouch(athlete, 'dig', lowBall, physics, DT);
     expect(plan?.technique).toBe('bump');
     expect(plan?.badBallReasons).toContain('low');
+  });
+
+  it('digs a well-aimed attack with a bump, without counting it as hard', () => {
+    const attack = solveLaunchBySpeed(
+      Vec3.create(0.25, 2.46, 2.85),
+      contactPoint(athlete, 'bump'),
+      12,
+      physics,
+      DT,
+    );
+    if (!attack) {
+      throw new Error('test attack has no launch');
+    }
+    const plan = planTouch(
+      athlete,
+      'dig',
+      { position: Vec3.create(0.25, 2.46, 2.85), velocity: attack },
+      physics,
+      DT,
+    );
+    expect(plan?.technique).toBe('bump');
+    expect(plan?.badBallReasons.length).toBeGreaterThan(0);
+    expect(plan?.hardReasons).toEqual([]);
   });
 
   it('bumps a ball that lands far from the body', () => {

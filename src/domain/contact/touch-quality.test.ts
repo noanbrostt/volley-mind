@@ -7,7 +7,12 @@ import {
 import { uniformAttributes } from '@domain/athlete/attributes';
 import { describe, expect, it } from 'vitest';
 import { IDEAL_AIM } from './touch-aim';
-import { isWithinTimingWindow, type TouchExecution, touchQuality } from './touch-quality';
+import {
+  isWithinReach,
+  isWithinTimingWindow,
+  type TouchExecution,
+  touchQuality,
+} from './touch-quality';
 
 const perfect: TouchExecution = { timingErrorS: 0, positionErrorM: 0, aim: IDEAL_AIM };
 const best = uniformAttributes(100);
@@ -74,5 +79,13 @@ describe('isWithinTimingWindow', () => {
     expect(isWithinTimingWindow(0)).toBe(true);
     expect(isWithinTimingWindow(-TOUCH_TIMING_WINDOW_S)).toBe(true);
     expect(isWithinTimingWindow(TOUCH_TIMING_WINDOW_S + 0.01)).toBe(false);
+  });
+});
+
+describe('isWithinReach', () => {
+  it('reaches the ball only up to the position tolerance', () => {
+    expect(isWithinReach(0)).toBe(true);
+    expect(isWithinReach(TOUCH_POSITION_TOLERANCE_M)).toBe(true);
+    expect(isWithinReach(TOUCH_POSITION_TOLERANCE_M + 0.01)).toBe(false);
   });
 });

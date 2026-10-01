@@ -12,20 +12,28 @@ import type { Technique } from './technique';
 /** Why a ball is bad (Noan): low, far from the body, or out of time. A strong ball is not. */
 export type BadBallReason = 'low' | 'far' | 'late';
 
+/** What makes the touch actually being played harder than ideal. */
+export type HardReason = 'far' | 'late';
+
 export interface TouchPlan {
   readonly technique: Technique;
   /** Where and when the ball meets the athlete's contact point. */
   readonly contact: BallCrossing;
   /** Where the athlete must stand (feet) for the contact point to meet the ball, in m. */
   readonly standPosition: Vec3;
-  /** Empty for a good ball. */
+  /** Why the preferred technique was dropped (Noan's bad ball); empty for a good ball. */
   readonly badBallReasons: readonly BadBallReason[];
+  /**
+   * Whether the technique being played is itself out of comfortable reach. Only this
+   * lowers quality: a ball aimed at bump height is a normal bump, not a hard one.
+   */
+  readonly hardReasons: readonly HardReason[];
 }
 
 interface Assessment {
   readonly contact: BallCrossing;
   readonly standPosition: Vec3;
-  readonly reasons: readonly BadBallReason[];
+  readonly reasons: readonly HardReason[];
 }
 
 /**
@@ -48,7 +56,13 @@ export function planTouch(
 
   const ideal = check(preferred, heightOf(preferred));
   if (ideal && ideal.reasons.length === 0) {
-    return { technique: preferred, ...ideal, badBallReasons: [] };
+    return {
+      technique: preferred,
+      contact: ideal.contact,
+      standPosition: ideal.standPosition,
+      badBallReasons: [],
+      hardReasons: [],
+    };
   }
 
   // The roll shot is taken from the spike position (Noan), so a far or late attack ball is
@@ -66,7 +80,8 @@ export function planTouch(
     technique: fallback,
     contact: played.contact,
     standPosition: played.standPosition,
-    badBallReasons: [...new Set([...idealReasons, ...played.reasons])],
+    badBallReasons: idealReasons,
+    hardReasons: played.reasons,
   };
 }
 
@@ -93,7 +108,7 @@ function assess(
     return null;
   }
   const standPosition = standPositionFor(athlete, technique, contact.point);
-  const reasons: BadBallReason[] = [];
+  const reasons: HardReason[] = [];
   if (Vec3.distance(standPosition, athlete.basePosition) > ATHLETE_STEP_REACH_M) {
     reasons.push('far');
   }

@@ -1,11 +1,13 @@
-import { DRILL_PARTNER_DISTANCE_M } from '@config/attack-defense-drill';
-import { BALL_LAUNCH_SPEED_MPS, BALL_SPAWN_HEIGHT_M } from '@config/ball-launch';
+import { DRILL_FIRST_TOSS_DELAY_S, DRILL_PARTNER_DISTANCE_M } from '@config/attack-defense-drill';
 import { SIMULATION_STEP_S } from '@config/simulation';
 import { Vec3 } from '@core/vec3';
+import type { AthleteId } from '@domain/athlete/athlete-state';
 import { forwardOf } from '@domain/athlete/athlete-state';
-import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
+import { uniformAttributes } from '@domain/athlete/attributes';
+import { IDEAL_AIM } from '@domain/contact/touch-aim';
 import { describe, expect, it } from 'vitest';
 import { stepWorld } from './step-world';
+import type { WorldCommand } from './world-command';
 import type { WorldEvent } from './world-event';
 import {
   ATHLETE_A_ID,
@@ -16,80 +18,158 @@ import {
 } from './world-state';
 
 const DT = SIMULATION_STEP_S;
+const BOTH_AI = [ATHLETE_A_ID, ATHLETE_B_ID];
+
+function drillWorld(
+  options: { attribute?: number; ai?: readonly AthleteId[]; seed?: number } = {},
+): WorldState {
+  const world = createWorld({ seed: options.seed ?? 1, aiAthleteIds: options.ai ?? BOTH_AI });
+  const { attribute } = options;
+  if (attribute === undefined) {
+    return world;
+  }
+  return {
+    ...world,
+    athletes: world.athletes.map((athlete) => ({
+      ...athlete,
+      attributes: uniformAttributes(attribute),
+    })),
+  };
+}
+
+interface Run {
+  readonly world: WorldState;
+  readonly events: readonly WorldEvent[];
+}
+
+function run(
+  start: WorldState,
+  seconds: number,
+  commandsFor: (world: WorldState) => readonly WorldCommand[] = () => [],
+): Run {
+  let world = start;
+  const events: WorldEvent[] = [];
+  for (let i = 0; i < Math.round(seconds / DT); i++) {
+    const step = stepWorld(world, commandsFor(world), DT);
+    world = step.world;
+    events.push(...step.events);
+  }
+  return { world, events };
+}
+
+function eventsOf<T extends WorldEvent['type']>(
+  events: readonly WorldEvent[],
+  type: T,
+): Extract<WorldEvent, { type: T }>[] {
+  return events.filter((event): event is Extract<WorldEvent, { type: T }> => event.type === type);
+}
 
 describe('createWorld', () => {
-  it('starts at tick 0 with a still ball above the floor', () => {
-    const world = createWorld();
-    expect(world.tick).toBe(0);
-    expect(world.ball.position).toEqual(Vec3.create(0, BALL_SPAWN_HEIGHT_M, 0));
-    expect(world.ball.velocity).toEqual(Vec3.ZERO);
-  });
-
   it('places A and B on their bases, the drill distance apart, facing each other', () => {
-    const world = createWorld();
+    const world = drillWorld();
     const a = findAthlete(world, ATHLETE_A_ID);
     const b = findAthlete(world, ATHLETE_B_ID);
     if (!a || !b) {
       throw new Error('drill athletes missing');
     }
     expect(Vec3.distance(a.basePosition, b.basePosition)).toBeCloseTo(DRILL_PARTNER_DISTANCE_M);
-    expect(a.position).toEqual(a.basePosition);
     const aLooksAtB = Vec3.dot(
       forwardOf(a.facing),
       Vec3.normalize(Vec3.sub(b.position, a.position)),
     );
-    const bLooksAtA = Vec3.dot(
-      forwardOf(b.facing),
-      Vec3.normalize(Vec3.sub(a.position, b.position)),
-    );
     expect(aLooksAtB).toBeCloseTo(1, 12);
-    expect(bLooksAtA).toBeCloseTo(1, 12);
+  });
+
+  it('starts with A due to open the drill with a self-toss', () => {
+    const world = drillWorld();
+    expect(world.tick).toBe(0);
+    expect(world.drill).toEqual({
+      phase: 'broken',
+      restart: { athleteId: ATHLETE_A_ID, tick: Math.round(DRILL_FIRST_TOSS_DELAY_S / DT) },
+    });
   });
 
   it('finds no athlete for an unknown id', () => {
-    expect(findAthlete(createWorld(), 'nobody')).toBeUndefined();
+    expect(findAthlete(drillWorld(), 'nobody')).toBeUndefined();
   });
 });
 
-describe('stepWorld', () => {
-  it('advances the tick and lets the ball fall', () => {
-    const { world } = stepWorld(createWorld(), [], DT);
-    expect(world.tick).toBe(1);
-    expect(world.ball.position.y).toBeLessThan(BALL_SPAWN_HEIGHT_M);
-  });
-
-  it('launches the ball straight up from where it is', () => {
-    const resting: WorldState = {
-      ...createWorld(),
-      tick: 10,
-      ball: { position: Vec3.create(2, DEFAULT_BALL_PHYSICS.radius, -1), velocity: Vec3.ZERO },
-    };
-    const { world } = stepWorld(resting, [{ type: 'launch-ball' }], DT);
-    expect(world.ball.velocity.y).toBeGreaterThan(BALL_LAUNCH_SPEED_MPS - 1);
-    expect(world.ball.position.y).toBeGreaterThan(DEFAULT_BALL_PHYSICS.radius);
-    expect(world.ball.position.x).toBeCloseTo(2);
-    expect(world.ball.position.z).toBeCloseTo(-1);
-  });
-
-  it('reports a bounce event with the tick it happened on', () => {
-    let world = createWorld();
-    const events: WorldEvent[] = [];
-    for (let i = 0; i < 120 && events.length === 0; i++) {
-      const result = stepWorld(world, [], DT);
-      events.push(...result.events);
-      world = result.world;
+describe('stepWorld: the attack-defense drill', () => {
+  it('opens with A tossing to themselves and expecting their own attack', () => {
+    const { world, events } = run(drillWorld(), DRILL_FIRST_TOSS_DELAY_S + 2 * DT);
+    expect(eventsOf(events, 'loop-restarted')).toEqual([
+      { type: 'loop-restarted', tick: Math.round(DRILL_FIRST_TOSS_DELAY_S / DT), athleteId: 'a' },
+    ]);
+    expect(world.drill.phase).toBe('rally');
+    if (world.drill.phase === 'rally') {
+      expect(world.drill.incoming.athleteId).toBe(ATHLETE_A_ID);
+      expect(world.drill.incoming.action).toBe('attack');
     }
-    expect(events).toHaveLength(1);
-    expect(events[0]?.type).toBe('ball-bounced');
-    expect(events[0]?.tick).toBe(world.tick);
   });
 
-  it('is deterministic and leaves its input untouched', () => {
-    const start = createWorld();
-    const snapshot = JSON.stringify(start);
-    const a = stepWorld(start, [{ type: 'launch-ball' }], DT);
-    const b = stepWorld(start, [{ type: 'launch-ball' }], DT);
-    expect(a).toEqual(b);
-    expect(JSON.stringify(start)).toBe(snapshot);
+  it('never breaks the loop between perfect athletes, alternating attack → dig → set', () => {
+    const { events } = run(drillWorld({ attribute: 100 }), 60);
+    expect(eventsOf(events, 'loop-broken')).toEqual([]);
+
+    const touches = eventsOf(events, 'ball-touched');
+    expect(touches.length).toBeGreaterThan(20);
+    touches.forEach((touch, i) => {
+      expect(touch.athleteId).toBe(i % 2 === 0 ? ATHLETE_A_ID : ATHLETE_B_ID);
+      expect(touch.action).toBe(['attack', 'dig', 'set'][i % 3]);
+      expect(touch.quality).toBeGreaterThan(0.9);
+    });
+  });
+
+  it('breaks the loop with weak athletes, and the nearest athlete restarts it', () => {
+    const { events } = run(drillWorld({ attribute: 5, seed: 3 }), 120);
+    const broken = eventsOf(events, 'loop-broken');
+    expect(broken.length).toBeGreaterThan(0);
+    expect(eventsOf(events, 'loop-restarted').length).toBeGreaterThan(1);
+  });
+
+  it('is deterministic for the same seed', () => {
+    const first = run(drillWorld({ seed: 7 }), 30);
+    const second = run(drillWorld({ seed: 7 }), 30);
+    expect(second.events).toEqual(first.events);
+    expect(second.world).toEqual(first.world);
+  });
+
+  it('keeps the world as plain data that survives JSON', () => {
+    const { world } = run(drillWorld(), 5);
+    expect(JSON.parse(JSON.stringify(world))).toEqual(world);
+  });
+});
+
+describe('stepWorld: a player-controlled athlete', () => {
+  const playerWorld = (): WorldState => drillWorld({ ai: [ATHLETE_B_ID] });
+
+  it('misses when the player never releases, and the loop breaks', () => {
+    const { events } = run(playerWorld(), 5);
+    expect(eventsOf(events, 'touch-missed')[0]?.athleteId).toBe(ATHLETE_A_ID);
+    expect(eventsOf(events, 'loop-broken').length).toBe(1);
+  });
+
+  it('plays the touch when the player releases at the right moment', () => {
+    const releaseOnTime = (world: WorldState): readonly WorldCommand[] => {
+      const { drill } = world;
+      const due =
+        drill.phase === 'rally' &&
+        drill.incoming.athleteId === ATHLETE_A_ID &&
+        world.tick === Math.round(drill.incoming.contactTick);
+      return due ? [{ type: 'touch', athleteId: ATHLETE_A_ID, aim: IDEAL_AIM }] : [];
+    };
+    const { events } = run(playerWorld(), 3, releaseOnTime);
+    const touch = eventsOf(events, 'ball-touched')[0];
+    expect(touch?.athleteId).toBe(ATHLETE_A_ID);
+    expect(touch?.action).toBe('attack');
+    expect(Math.abs(touch?.timingErrorS ?? 1)).toBeLessThan(DT);
+  });
+
+  it('ignores a release from an athlete who is not expected to touch', () => {
+    const tossed = run(playerWorld(), DRILL_FIRST_TOSS_DELAY_S + DT).world;
+    const wrong: WorldCommand = { type: 'touch', athleteId: ATHLETE_B_ID, aim: IDEAL_AIM };
+    const withWrong = stepWorld(tossed, [wrong], DT);
+    const without = stepWorld(tossed, [], DT);
+    expect(withWrong).toEqual(without);
   });
 });

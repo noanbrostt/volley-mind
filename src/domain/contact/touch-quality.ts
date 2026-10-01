@@ -25,6 +25,11 @@ export function isWithinTimingWindow(timingErrorS: number): boolean {
   return Math.abs(timingErrorS) <= TOUCH_TIMING_WINDOW_S;
 }
 
+/** Whether an athlete this far from the ideal standing spot can still reach the ball. */
+export function isWithinReach(positionErrorM: number): boolean {
+  return positionErrorM <= TOUCH_POSITION_TOLERANCE_M;
+}
+
 /**
  * Touch quality from 0 to 1. Execution (timing, position, aim) is weighted by the athlete's
  * skill — the action attribute together with the technique attribute (athletes.md) — and a
