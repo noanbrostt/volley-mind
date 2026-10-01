@@ -18,9 +18,10 @@ import { ATHLETE_A_ID, ATHLETE_B_ID, createWorld } from '@simulation/world-state
 import { createAimGuide } from '@ui/aim-guide';
 import { createTouchFeedback } from '@ui/touch-feedback';
 import './app.css';
-import type { DevTools } from './dev-tools';
+import type { FpsCounter } from '@ui/fps-counter';
 
 const MILLISECONDS_PER_SECOND = 1000;
+const FPS_QUERY_PARAM = 'fps';
 const UINT32_RANGE = 2 ** 32;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
@@ -70,10 +71,16 @@ const gesture = listenForTouchGesture(canvas, {
 });
 
 // Dev-only tools load through dynamic import so production bundles never contain them.
-let devTools: DevTools | null = null;
 if (import.meta.env.DEV) {
-  void import('./dev-tools').then(({ startDevTools }) => {
-    devTools = startDevTools(view.scene);
+  void import('./dev-tools').then(({ startDevTools }) => startDevTools(view.scene));
+}
+
+// The FPS readout: always in development; in the published game only with ?fps in the
+// address, to measure on real phones. Loaded on demand so normal play never pays for it.
+let fpsCounter: FpsCounter | null = null;
+if (import.meta.env.DEV || new URLSearchParams(window.location.search).has(FPS_QUERY_PARAM)) {
+  void import('@ui/fps-counter').then(({ createFpsCounter }) => {
+    fpsCounter = createFpsCounter(document.body);
   });
 }
 
@@ -99,7 +106,12 @@ engine.runRenderLoop(() => {
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
   syncContactCue(view.contactCue, runner.current, PLAYER_ATHLETE_ID, runner.alpha);
   view.scene.render();
-  devTools?.onFrame(engine.getFps(), frameSeconds);
+  fpsCounter?.update(
+    engine.getFps(),
+    frameSeconds,
+    engine.getRenderWidth(),
+    engine.getRenderHeight(),
+  );
 });
 
 /** Keeps the aiming arc and ripples on the (smoothed) aim while the ball waits for it. */
