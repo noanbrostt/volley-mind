@@ -1,11 +1,19 @@
+import { DRILL_PARTNER_DISTANCE_M } from '@config/attack-defense-drill';
 import { BALL_LAUNCH_SPEED_MPS, BALL_SPAWN_HEIGHT_M } from '@config/ball-launch';
 import { SIMULATION_STEP_S } from '@config/simulation';
 import { Vec3 } from '@core/vec3';
+import { forwardOf } from '@domain/athlete/athlete-state';
 import { DEFAULT_BALL_PHYSICS } from '@domain/ball/ball-physics';
 import { describe, expect, it } from 'vitest';
 import { stepWorld } from './step-world';
 import type { WorldEvent } from './world-event';
-import { createWorld, type WorldState } from './world-state';
+import {
+  ATHLETE_A_ID,
+  ATHLETE_B_ID,
+  createWorld,
+  findAthlete,
+  type WorldState,
+} from './world-state';
 
 const DT = SIMULATION_STEP_S;
 
@@ -15,6 +23,31 @@ describe('createWorld', () => {
     expect(world.tick).toBe(0);
     expect(world.ball.position).toEqual(Vec3.create(0, BALL_SPAWN_HEIGHT_M, 0));
     expect(world.ball.velocity).toEqual(Vec3.ZERO);
+  });
+
+  it('places A and B on their bases, the drill distance apart, facing each other', () => {
+    const world = createWorld();
+    const a = findAthlete(world, ATHLETE_A_ID);
+    const b = findAthlete(world, ATHLETE_B_ID);
+    if (!a || !b) {
+      throw new Error('drill athletes missing');
+    }
+    expect(Vec3.distance(a.basePosition, b.basePosition)).toBeCloseTo(DRILL_PARTNER_DISTANCE_M);
+    expect(a.position).toEqual(a.basePosition);
+    const aLooksAtB = Vec3.dot(
+      forwardOf(a.facing),
+      Vec3.normalize(Vec3.sub(b.position, a.position)),
+    );
+    const bLooksAtA = Vec3.dot(
+      forwardOf(b.facing),
+      Vec3.normalize(Vec3.sub(a.position, b.position)),
+    );
+    expect(aLooksAtB).toBeCloseTo(1, 12);
+    expect(bLooksAtA).toBeCloseTo(1, 12);
+  });
+
+  it('finds no athlete for an unknown id', () => {
+    expect(findAthlete(createWorld(), 'nobody')).toBeUndefined();
   });
 });
 
@@ -27,6 +60,7 @@ describe('stepWorld', () => {
 
   it('launches the ball straight up from where it is', () => {
     const resting: WorldState = {
+      ...createWorld(),
       tick: 10,
       ball: { position: Vec3.create(2, DEFAULT_BALL_PHYSICS.radius, -1), velocity: Vec3.ZERO },
     };

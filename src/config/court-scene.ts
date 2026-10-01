@@ -12,8 +12,21 @@ export const BALL_MESH_SEGMENTS = 20;
 /** Brightness of the gym ceiling light, 0–1+. */
 export const CEILING_LIGHT_INTENSITY = 0.95;
 
-/** Orbit camera, looking at the play area from the side and slightly above. */
-export const CAMERA_ORBIT_ANGLE_RAD = -Math.PI / 2;
-export const CAMERA_TILT_FROM_VERTICAL_RAD = 1.2;
-export const CAMERA_DISTANCE_M = 10;
-export const CAMERA_TARGET_HEIGHT_M = 1.8;
+// Over-the-shoulder camera behind the player's athlete, looking at the partner.
+/** Distance behind the athlete, in m. */
+export const CAMERA_BEHIND_M = 3.5;
+/** Height above the floor, in m. */
+export const CAMERA_HEIGHT_M = 2.4;
+/** Offset to the athlete's right, so the view clears their head, in m. */
+export const CAMERA_SHOULDER_OFFSET_M = 0.6;
+/** Height on the partner the camera looks at, in m. */
+export const CAMERA_LOOK_HEIGHT_M = 1.3;
+
+/** One color per athlete, in world order (A, then B). */
+export const ATHLETE_COLORS_HEX: readonly string[] = ['#3d7be0', '#e05a4f'];
+/** Torso thickness, in m. */
+export const ATHLETE_BODY_RADIUS_M = 0.22;
+/** Head size, in m. */
+export const ATHLETE_HEAD_RADIUS_M = 0.12;
+/** Mesh detail for athletes; kept low for weak phones. */
+export const ATHLETE_MESH_TESSELLATION = 12;

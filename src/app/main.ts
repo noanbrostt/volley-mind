@@ -1,10 +1,11 @@
 import { listenForLaunch } from '@input/pointer-launch';
+import { syncAthleteViews } from '@render/athlete-view';
 import { syncBallView } from '@render/ball-view';
 import { createCourtScene } from '@render/court-scene';
 import { createEngine, watchCanvasResize } from '@render/create-engine';
 import { advanceSimulation, createSimulationRunner } from '@simulation/simulation-runner';
 import type { WorldCommand } from '@simulation/world-command';
-import { createWorld } from '@simulation/world-state';
+import { ATHLETE_A_ID, createWorld } from '@simulation/world-state';
 import './app.css';
 import type { DevTools } from './dev-tools';
 
@@ -20,9 +21,13 @@ canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
 const engine = createEngine(canvas);
 watchCanvasResize(engine);
-const view = createCourtScene(engine);
 
-let runner = createSimulationRunner(createWorld());
+// The player controls athlete A; the camera stands behind them.
+const PLAYER_ATHLETE_ID = ATHLETE_A_ID;
+const world = createWorld();
+const view = createCourtScene(engine, world, PLAYER_ATHLETE_ID);
+
+let runner = createSimulationRunner(world);
 const commands: WorldCommand[] = [];
 listenForLaunch(canvas, (command) => commands.push(command));
 
@@ -41,6 +46,7 @@ engine.runRenderLoop(() => {
   commands.length = 0;
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
+  syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
   view.scene.render();
   devTools?.onFrame(engine.getFps(), frameSeconds);
 });

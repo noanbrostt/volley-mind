@@ -25,7 +25,7 @@ export function stepWorld(
     ? [{ type: 'ball-bounced', tick, bounce: ballStep.bounce }]
     : [];
 
-  return { world: { tick, ball: ballStep.ball }, events };
+  return { world: { ...commanded, tick, ball: ballStep.ball }, events };
 }
 
 function applyCommand(world: WorldState, command: WorldCommand): WorldState {

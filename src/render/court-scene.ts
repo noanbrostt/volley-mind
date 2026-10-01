@@ -1,4 +1,3 @@
-import { ArcRotateCamera } from '@babylonjs/core/Cameras/arcRotateCamera';
 import type { Engine } from '@babylonjs/core/Engines/engine';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -12,35 +11,37 @@ import { BALL_RADIUS_M } from '@config/ball';
 import {
   BALL_COLOR_HEX,
   BALL_MESH_SEGMENTS,
-  CAMERA_DISTANCE_M,
-  CAMERA_ORBIT_ANGLE_RAD,
-  CAMERA_TARGET_HEIGHT_M,
-  CAMERA_TILT_FROM_VERTICAL_RAD,
   CEILING_LIGHT_INTENSITY,
   COURT_FLOOR_AREA_SIZE_M,
   COURT_FLOOR_COLOR_HEX,
   GYM_BACKGROUND_COLOR_HEX,
 } from '@config/court-scene';
+import type { AthleteId } from '@domain/athlete/athlete-state';
+import type { WorldState } from '@simulation/world-state';
+import { type AthleteViews, createAthleteViews } from './athlete-view';
+import { createOverShoulderCamera } from './over-shoulder-camera';
 
 export interface CourtScene {
   readonly scene: Scene;
   readonly ball: Mesh;
+  readonly athletes: AthleteViews;
 }
 
-export function createCourtScene(engine: Engine): CourtScene {
+/** Builds the court, the ball, the athletes and the camera behind the viewer's athlete. */
+export function createCourtScene(
+  engine: Engine,
+  world: WorldState,
+  viewerId: AthleteId,
+): CourtScene {
   const scene = new Scene(engine);
   scene.clearColor = Color4.FromColor3(Color3.FromHexString(GYM_BACKGROUND_COLOR_HEX));
 
-  const camera = new ArcRotateCamera(
-    'camera',
-    CAMERA_ORBIT_ANGLE_RAD,
-    CAMERA_TILT_FROM_VERTICAL_RAD,
-    CAMERA_DISTANCE_M,
-    new Vector3(0, CAMERA_TARGET_HEIGHT_M, 0),
-    scene,
-  );
-  // The camera is fixed: touches belong to the game, not to orbiting.
-  camera.inputs.clear();
+  const viewer = world.athletes.find((athlete) => athlete.id === viewerId);
+  const partner = world.athletes.find((athlete) => athlete.id !== viewerId);
+  if (!viewer || !partner) {
+    throw new Error(`The court scene needs the viewer "${viewerId}" and a partner`);
+  }
+  createOverShoulderCamera(scene, viewer, partner);
 
   const light = new HemisphericLight('ceiling-light', Vector3.Up(), scene);
   light.intensity = CEILING_LIGHT_INTENSITY;
@@ -59,7 +60,7 @@ export function createCourtScene(engine: Engine): CourtScene {
   );
   ball.material = flatMaterial('ball-material', BALL_COLOR_HEX, scene);
 
-  return { scene, ball };
+  return { scene, ball, athletes: createAthleteViews(scene, world.athletes) };
 }
 
 function flatMaterial(name: string, colorHex: string, scene: Scene): StandardMaterial {
