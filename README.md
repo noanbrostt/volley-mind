@@ -29,6 +29,10 @@ Em desenvolvimento, o FPS aparece no canto da tela e a tecla **I** abre o inspet
 | `npm run check` | Tipos, lint e testes (obrigatório antes de concluir) |
 | `npm run format` | Formatação e organização de imports |
 
+### Tela cinza em desenvolvimento
+
+Se a quadra some (tela cinza, só a interface aparece) e o console mostra `504 (Outdated Optimize Dep)`, o Vite reempacotou as dependências com o servidor aberto. Isso acontece quando o código passa a usar uma peça nova do Babylon. Pare o `npm run dev`, rode de novo e recarregue a página com **Ctrl+Shift+R**.
+
 ## Stack
 
 TypeScript estrito, Vite, Babylon.js, Vitest, Biome e PWA. Sem motor de física: a bola é simulada no domínio.
