@@ -16,6 +16,7 @@ import {
   READY_NONE_ABOVE_MPS,
   READY_SMOOTHING_S,
   READY_STANCE,
+  RELAXED_HANDS_OPEN,
 } from '@config/athlete-gestures';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
@@ -172,6 +173,9 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       // A hand left out of the gesture (the spike's other arm) drops the ready stance.
       const ready = gestureShape ? readiness : readiness * (1 - strength);
       const weight = Math.max(ready, gesture);
+      // Volleyball hands are always open (Noan), whatever the running clips do.
+      const readyOpen = lerp(RELAXED_HANDS_OPEN, READY_STANCE.fingersOpen, ready);
+      openFingers(arm.fingers, lerp(readyOpen, gestureShape?.fingersOpen ?? readyOpen, gesture));
       if (weight <= 0) {
         continue;
       }
@@ -189,8 +193,6 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
 
       placePalm(frame, READY_STANCE.palm, gestureShape?.palm, gesture, arm.outward);
       solveArm(arm.rig, target, pole, palmDirection, fingersDirection, weight);
-      const open = lerp(READY_STANCE.fingersOpen, gestureShape?.fingersOpen ?? 0, gesture);
-      openFingers(arm.fingers, weight * open);
     }
   });
 

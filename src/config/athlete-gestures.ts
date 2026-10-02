@@ -105,6 +105,9 @@ export const READY_LEAD_S = 0.15;
 /** ...after settling in over this time, in s. */
 export const READY_RAMP_S = 0.8;
 
+/** Volleyball hands are never fists (Noan): how open they are when nothing else asks, 0–1. */
+export const RELAXED_HANDS_OPEN = 0.85;
+
 /** The ready stance holds while walking and gives way to running arms above jogging pace. */
 export const READY_FULL_BELOW_MPS = 1.6;
 export const READY_NONE_ABOVE_MPS = 3.2;
@@ -164,7 +167,7 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
       fingers: { forward: 1, outward: 0, up: -0.6 },
     },
     crouch: 0.8,
-    fingersOpen: 0.5,
+    fingersOpen: 0.85,
     torsoLeanRad: 30 * (Math.PI / 180),
     torsoTwistRad: 0,
     contactEase: 'smooth',
@@ -210,23 +213,24 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     followThroughTwistRad: -25 * (Math.PI / 180),
     // Hands in these poses are where they sit relative to the turned torso: the arms turn
     // with it, so the hitting hand goes back because the trunk turns, not the shoulder alone.
+    // The hitting arm travels a little out to the side (Noan), never across the belly.
     windup: [
       {
         // The wind-up is unhurried (Noan). From the ready stance the hitting arm first drops
         // to the side of the body...
         atS: 0.9,
-        dominantHand: { forward: -0.1, outward: 0.15, up: -1.45 },
+        dominantHand: { forward: -0.05, outward: 0.3, up: -1.4 },
         otherHand: { forward: 0, outward: 0.45, up: -0.9 },
-        elbowPole: { forward: -0.2, outward: 0.5, up: -0.4 },
+        elbowPole: { forward: -0.2, outward: 0.8, up: -0.3 },
         torsoLeanRad: 0,
         torsoTwistRad: 15 * (Math.PI / 180),
       },
       {
         // ...then back beside the hip as the trunk turns; the other arm rises to the ball.
         atS: 0.6,
-        dominantHand: { forward: -0.35, outward: 0.05, up: -1.4 },
+        dominantHand: { forward: -0.3, outward: 0.25, up: -1.3 },
         otherHand: { forward: 0.15, outward: 0.45, up: -0.5 },
-        elbowPole: { forward: -0.4, outward: 0.5, up: -0.3 },
+        elbowPole: { forward: -0.4, outward: 0.8, up: -0.2 },
         torsoLeanRad: -3 * (Math.PI / 180),
         torsoTwistRad: 35 * (Math.PI / 180),
       },
@@ -235,9 +239,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
         // shoulder; the other arm points at the ball. From here the whip to the ball is short
         // and as fast as the athlete can make it.
         atS: 0.17,
-        dominantHand: { forward: -0.3, outward: 0, up: -0.5 },
+        dominantHand: { forward: -0.3, outward: 0.12, up: -0.5 },
         otherHand: { forward: 0.2, outward: 0.4, up: -0.25 },
-        elbowPole: { forward: -0.2, outward: 0.7, up: 0.5 },
+        elbowPole: { forward: -0.2, outward: 0.9, up: 0.5 },
         torsoLeanRad: -6 * (Math.PI / 180),
         torsoTwistRad: 50 * (Math.PI / 180),
       },
