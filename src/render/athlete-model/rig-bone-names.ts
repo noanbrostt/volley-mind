@@ -56,3 +56,6 @@ export const CHARACTER_LEGS: readonly string[] = [
     `ball_${side}`,
   ]),
 ];
+
+/** The lower back: the torso bends forward from here. */
+export const CHARACTER_SPINE = 'spine_01';

@@ -1,10 +1,17 @@
-import { GESTURE_RECOVER_S, GESTURES } from '@config/athlete-gestures';
+import { FOLLOW_THROUGH_SHARE, GESTURE_RECOVER_S, GESTURES } from '@config/athlete-gestures';
 import { SIMULATION_STEP_S } from '@config/simulation';
 import { Vec3 } from '@core/vec3';
 import type { IncomingTouch } from '@domain/contact/incoming-touch';
 import { ATHLETE_A_ID, ATHLETE_B_ID, createWorld, type WorldState } from '@simulation/world-state';
 import { describe, expect, it } from 'vitest';
-import { type GestureMoment, gestureStrength, trackGesture } from './gesture-timeline';
+import {
+  elbowPoleAt,
+  type GestureMoment,
+  gestureStrength,
+  handOffsetAt,
+  type MutableFrameOffset,
+  trackGesture,
+} from './gesture-timeline';
 
 const DT = SIMULATION_STEP_S;
 const BALL = Vec3.create(0, 1.9, 2.8);
@@ -88,5 +95,46 @@ describe('gestureStrength', () => {
     const late = gestureStrength(moment, 95, DT);
     expect(early).toBeGreaterThan(0);
     expect(late).toBeGreaterThan(early);
+  });
+});
+
+describe('handOffsetAt', () => {
+  const spike = GESTURES.spike;
+  const windup = spike.windup;
+  const out = (): MutableFrameOffset => ({ forward: 0, outward: 0, up: 0 });
+
+  it('holds the preparation, then swings onto the ball at contact', () => {
+    if (!windup?.dominantHand || !spike.dominantHand) {
+      throw new Error('the spike has a windup');
+    }
+    const prepared = out();
+    expect(handOffsetAt(spike, true, windup.swingS * 2, prepared)).toBe(true);
+    expect(prepared).toEqual(windup.dominantHand);
+    const atContact = out();
+    handOffsetAt(spike, true, 0, atContact);
+    expect(atContact).toEqual(spike.dominantHand);
+  });
+
+  it('lets the other arm of the spike go for the swing', () => {
+    expect(handOffsetAt(spike, false, windup ? windup.swingS * 2 : 1, out())).toBe(true);
+    expect(handOffsetAt(spike, false, 0.01, out())).toBe(false);
+  });
+
+  it('follows through after contact', () => {
+    const overhead = GESTURES.overhead;
+    const followed = out();
+    handOffsetAt(overhead, true, -GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE, followed);
+    expect(followed.up).toBeCloseTo((overhead.dominantHand?.up ?? 0) + overhead.followThrough.up);
+  });
+});
+
+describe('elbowPoleAt', () => {
+  it('uses the preparation pole before the swing and the contact pole at contact', () => {
+    const spike = GESTURES.spike;
+    const pole: MutableFrameOffset = { forward: 0, outward: 0, up: 0 };
+    elbowPoleAt(spike, 1, pole);
+    expect(pole).toEqual(spike.windup?.elbowPole);
+    elbowPoleAt(spike, 0, pole);
+    expect(pole).toEqual(spike.elbowPole);
   });
 });

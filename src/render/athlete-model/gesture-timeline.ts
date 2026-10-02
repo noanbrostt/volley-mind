@@ -1,5 +1,12 @@
 import { BUMP_CONTACT_FORWARD_M, BUMP_CONTACT_HEIGHT_RATIO } from '@config/athlete';
-import { GESTURE_RECOVER_S, GESTURES, type GestureName } from '@config/athlete-gestures';
+import {
+  FOLLOW_THROUGH_SHARE,
+  type FrameOffset,
+  GESTURE_RECOVER_S,
+  GESTURES,
+  type GestureName,
+  type GestureShape,
+} from '@config/athlete-gestures';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
@@ -54,6 +61,93 @@ export function gestureStrength(moment: GestureMoment, nowTick: number, stepSeco
     return smoothstep(1 - secondsToContact / GESTURES[moment.name].prepareS);
   }
   return smoothstep(1 + secondsToContact / GESTURE_RECOVER_S);
+}
+
+/** Seconds from now to the contact (negative once it has passed). */
+export function secondsToContact(moment: GestureMoment, nowTick: number, stepSeconds: number) {
+  return (moment.contactTick - nowTick) * stepSeconds;
+}
+
+/** A frame offset written in place, so the per-frame gesture math allocates nothing. */
+export type MutableFrameOffset = { -readonly [Key in keyof FrameOffset]: number };
+
+/**
+ * Where one hand goes relative to the ball center at contact, at this moment of the gesture:
+ * through the preparation (if any) and the swing, at the ball on contact, then on into the
+ * follow-through. Writes into `out`; returns false when the gesture leaves this hand free.
+ */
+export function handOffsetAt(
+  shape: GestureShape,
+  dominant: boolean,
+  untilContactS: number,
+  out: MutableFrameOffset,
+): boolean {
+  const atContact = dominant ? shape.dominantHand : shape.otherHand;
+  const windup = shape.windup;
+  if (untilContactS > 0 && windup) {
+    const prepared = (dominant ? windup.dominantHand : windup.otherHand) ?? atContact;
+    if (!prepared) {
+      return false;
+    }
+    if (untilContactS >= windup.swingS) {
+      copyOffset(prepared, out);
+      return true;
+    }
+    if (!atContact) {
+      return false;
+    }
+    mixOffsets(prepared, atContact, smoothstep(1 - untilContactS / windup.swingS), out);
+    return true;
+  }
+  if (!atContact) {
+    return false;
+  }
+  copyOffset(atContact, out);
+  if (untilContactS < 0) {
+    const followed = smoothstep(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
+    out.forward += shape.followThrough.forward * followed;
+    out.outward += shape.followThrough.outward * followed;
+    out.up += shape.followThrough.up * followed;
+  }
+  return true;
+}
+
+/** Where the elbows point at this moment: the preparation's pole until the swing. */
+export function elbowPoleAt(
+  shape: GestureShape,
+  untilContactS: number,
+  out: MutableFrameOffset,
+): void {
+  const windup = shape.windup;
+  if (!windup || untilContactS <= 0) {
+    copyOffset(shape.elbowPole, out);
+  } else if (untilContactS >= windup.swingS) {
+    copyOffset(windup.elbowPole, out);
+  } else {
+    mixOffsets(
+      windup.elbowPole,
+      shape.elbowPole,
+      smoothstep(1 - untilContactS / windup.swingS),
+      out,
+    );
+  }
+}
+
+function copyOffset(from: FrameOffset, out: MutableFrameOffset): void {
+  out.forward = from.forward;
+  out.outward = from.outward;
+  out.up = from.up;
+}
+
+function mixOffsets(
+  from: FrameOffset,
+  to: FrameOffset,
+  amount: number,
+  out: MutableFrameOffset,
+): void {
+  out.forward = from.forward + (to.forward - from.forward) * amount;
+  out.outward = from.outward + (to.outward - from.outward) * amount;
+  out.up = from.up + (to.up - from.up) * amount;
 }
 
 /** Where the hands hold the ball before the self-toss: where the toss leaves from. */

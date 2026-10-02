@@ -36,6 +36,22 @@ export interface GestureShape {
   readonly crouch: number;
   /** How far the fingers open from the running fist toward a flat hand, 0–1. */
   readonly fingersOpen: number;
+  /** Forward bend of the torso at contact, in rad. */
+  readonly torsoLeanRad: number;
+  /** Where the hands go after contact, relative to where they met the ball (frame offset). */
+  readonly followThrough: FrameOffset;
+  /** A preparation the hands pass through before swinging to the ball; null = straight. */
+  readonly windup: GestureWindup | null;
+}
+
+/** Cortada's "bow and arrow": the hitting hand back behind the head, the other one up. */
+export interface GestureWindup {
+  /** Hands during the preparation, relative to the ball center at contact; null = free. */
+  readonly dominantHand: FrameOffset | null;
+  readonly otherHand: FrameOffset | null;
+  readonly elbowPole: FrameOffset;
+  /** The swing from the preparation to the ball lasts this long before contact, in s. */
+  readonly swingS: number;
 }
 
 /**
@@ -57,6 +73,8 @@ export const READY_STANCE = {
   },
   crouch: 0.45,
   fingersOpen: 0.9,
+  /** Upper body slightly forward (coaching references: Volleyball Canada). */
+  torsoLeanRad: 12 * (Math.PI / 180),
 } as const;
 
 /** The ready stance holds while walking and gives way to running arms above jogging pace. */
@@ -67,8 +85,9 @@ export const READY_SMOOTHING_S = 0.2;
 
 export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
   /**
-   * Toque: the elbows bend and the hands stay in front of the body all the way up, ending in
-   * a cup around the back of the ball, in front of the forehead, elbows out.
+   * Toque (references: Volleyball Canada): the elbows bend and the hands stay in front of the
+   * body all the way up, ending in a cup around the back of the ball, in front of the
+   * forehead, elbows out; the legs extend into the contact and the arms follow the ball.
    */
   overhead: {
     prepareS: 0.45,
@@ -79,10 +98,13 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
       facing: { forward: 0.5, outward: -0.3, up: 0.8 },
       fingers: { forward: -0.2, outward: 0.3, up: 1 },
     },
-    crouch: 0.35,
+    crouch: 0.1,
     fingersOpen: 0.85,
+    torsoLeanRad: 0,
+    followThrough: { forward: 0.12, outward: 0.02, up: 0.12 },
+    windup: null,
   },
-  /** Manchete: wrists together beyond the ball, forearms making a platform under it. */
+  /** Manchete: low and wide, torso forward, arms straight and together in a platform. */
   bump: {
     prepareS: 0.4,
     dominantHand: { forward: 0.12, outward: 0.03, up: -0.12 },
@@ -92,12 +114,18 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
       facing: { forward: 0, outward: -1, up: 0.3 },
       fingers: { forward: 1, outward: 0, up: -0.6 },
     },
-    crouch: 0.7,
+    crouch: 0.8,
     fingersOpen: 0.5,
+    torsoLeanRad: 30 * (Math.PI / 180),
+    followThrough: { forward: 0.05, outward: 0, up: 0.08 },
+    windup: null,
   },
-  /** Cortada: the dominant arm stretched up, the open hand behind the ball. */
+  /**
+   * Cortada: "bow and arrow" preparation, then the hitting arm swings to the ball and on
+   * down across the body.
+   */
   spike: {
-    prepareS: 0.5,
+    prepareS: 0.7,
     dominantHand: { forward: -0.08, outward: 0, up: -0.03 },
     otherHand: null,
     elbowPole: { forward: -0.3, outward: 0.5, up: 0 },
@@ -107,6 +135,14 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     },
     crouch: 0,
     fingersOpen: 1,
+    torsoLeanRad: 0,
+    followThrough: { forward: 0.45, outward: -0.35, up: -1.1 },
+    windup: {
+      dominantHand: { forward: -0.55, outward: 0, up: -0.55 },
+      otherHand: { forward: 0.1, outward: 0.35, up: -0.25 },
+      elbowPole: { forward: -0.3, outward: 0.6, up: 0.3 },
+      swingS: 0.18,
+    },
   },
   /** Largada (roll shot): like the spike, but the hand softly behind and under the ball. */
   'roll-shot': {
@@ -120,6 +156,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     },
     crouch: 0,
     fingersOpen: 0.8,
+    torsoLeanRad: 0,
+    followThrough: { forward: 0.15, outward: 0, up: 0.05 },
+    windup: null,
   },
   /** Peixinho: both arms stretched toward the ball. */
   dive: {
@@ -133,6 +172,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     },
     crouch: 0.9,
     fingersOpen: 0.8,
+    torsoLeanRad: 0,
+    followThrough: { forward: 0, outward: 0, up: 0 },
+    windup: null,
   },
   /** Auto-lançamento: both hands under the ball, lifting it. */
   'self-toss': {
@@ -146,9 +188,14 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     },
     crouch: 0.3,
     fingersOpen: 1,
+    torsoLeanRad: 0,
+    followThrough: { forward: 0, outward: 0, up: 0.35 },
+    windup: null,
   },
 };
 
+/** The follow-through takes this share of the recovery; the rest eases back. */
+export const FOLLOW_THROUGH_SHARE = 0.6;
 /** After contact the arms go back to the ready stance (or the running arms) over this time, in s. */
 export const GESTURE_RECOVER_S = 0.35;
 /** Below this strength the arms barely move, so the hands may jump to a new target unseen. */

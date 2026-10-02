@@ -16,9 +16,18 @@ import {
 } from '@config/athlete-gestures';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
-import { type GestureMoment, gestureStrength, trackGesture } from './gesture-timeline';
+import {
+  elbowPoleAt,
+  type GestureMoment,
+  gestureStrength,
+  handOffsetAt,
+  type MutableFrameOffset,
+  secondsToContact,
+  trackGesture,
+} from './gesture-timeline';
 import { type BoneFrame, captureBoneFrame, orientBone } from './orient-bone';
-import { CHARACTER_ARMS } from './rig-bone-names';
+import { CHARACTER_ARMS, CHARACTER_SPINE } from './rig-bone-names';
+import { turnBone } from './turn-bone';
 import { type LimbChain, solveTwoBoneIk } from './two-bone-ik';
 
 export interface ArmGestures {
@@ -50,7 +59,7 @@ interface Arm {
   readonly hand: BoneFrame;
   /** Finger bones with their rest rotation: the model rests with flat, open hands. */
   readonly fingers: readonly Finger[];
-  /** Where the gesture wants this hand, in world space (smoothed). */
+  /** Where the gesture wants this hand right now, in world space. */
   readonly gestureTarget: Vector3;
   /** Whether the current gesture uses this hand at all. */
   inGesture: boolean;
@@ -61,7 +70,7 @@ interface Finger {
   readonly rest: Quaternion;
 }
 
-type MutableOffset = { -readonly [Key in keyof FrameOffset]: number };
+type MutableOffset = MutableFrameOffset;
 
 /** The athlete's frame on the floor: where they face, their right, and their feet. */
 class FloorFrame {
@@ -102,6 +111,9 @@ const palmDirection = new Vector3();
 const mixedPole: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const mixedFacing: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const mixedFingers: MutableOffset = { forward: 0, outward: 0, up: 0 };
+const handOffset: MutableOffset = { forward: 0, outward: 0, up: 0 };
+const leanFrom = new Vector3();
+const leanTo = new Vector3();
 const DOWN = new Vector3(0, -1, 0);
 
 /**
@@ -115,7 +127,12 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
     throw new Error(`Model ${modelRoot.name} needs a parent node that turns with the body`);
   }
   const arms = (['right', 'left'] as const).map((side) => createArm(modelRoot, side));
+  const spine = findBone(modelRoot, CHARACTER_SPINE);
   const frame = new FloorFrame();
+  /** The ball at contact, smoothed: predictions shift a little as the ball flies. */
+  const anchor = new Vector3();
+  const gesturePole: MutableOffset = { forward: 0, outward: 0, up: 0 };
+  let torsoLean = 0;
   let moment: GestureMoment | null = null;
   let shape: GestureShape | null = null;
   let strength = 0;
@@ -127,6 +144,14 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
 
   modelRoot.getScene().onAfterAnimationsObservable.add(() => {
     frame.fromBody(body);
+    if (torsoLean > 0) {
+      // Bend forward from the lower back: turn "up" toward the front by the lean angle.
+      leanFrom.set(0, 1, 0);
+      leanTo.copyFrom(frame.forward).scaleInPlace(Math.sin(torsoLean));
+      leanTo.y = Math.cos(torsoLean);
+      spine.computeWorldMatrix(true);
+      turnBone(spine, spine.getAbsolutePosition(), leanFrom, leanTo, 1);
+    }
     for (const arm of arms) {
       const gestureShape = arm.inGesture ? shape : null;
       const gesture = gestureShape ? strength : 0;
@@ -141,7 +166,8 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       readyTarget.addInPlace(frame.feet);
       Vector3.LerpToRef(readyTarget, arm.gestureTarget, gesture, target);
 
-      mixOffsets(READY_STANCE.elbowPole, gestureShape?.elbowPole, gesture, mixedPole);
+      const armPole = gestureShape ? gesturePole : undefined;
+      mixOffsets(READY_STANCE.elbowPole, armPole, gesture, mixedPole);
       frame.place(mixedPole, arm.outward, pole);
       pole.addInPlace(arm.chain.upper.getAbsolutePosition());
       solveTwoBoneIk(arm.chain, target, pole, weight);
@@ -178,6 +204,8 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       shape = moment ? GESTURES[moment.name] : null;
       const readyCrouch = READY_STANCE.crouch * readiness;
       crouch = shape ? lerp(readyCrouch, shape.crouch, strength) : readyCrouch;
+      const readyLean = READY_STANCE.torsoLeanRad * readiness;
+      torsoLean = shape ? lerp(readyLean, shape.torsoLeanRad, strength) : readyLean;
       diveLean = moment?.name === 'dive' ? leanBeforeContact(moment, nowTick, stepSeconds) : 0;
       if (moment?.name === 'dive') {
         diveYaw = directionFromFacing(athlete, moment.ball.x, moment.ball.z);
@@ -188,35 +216,38 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
         }
         return;
       }
+      // A fresh gesture starts right on the ball; afterwards the anchor glides.
+      desired.set(moment.ball.x, moment.ball.y, moment.ball.z);
+      if (strength < GESTURE_RETARGET_BELOW_STRENGTH) {
+        anchor.copyFrom(desired);
+      } else {
+        Vector3.LerpToRef(anchor, desired, blend, anchor);
+      }
+      const untilContactS = secondsToContact(moment, nowTick, stepSeconds);
+      elbowPoleAt(shape, untilContactS, gesturePole);
       frame.fromFacing(athlete.facing);
       for (const arm of arms) {
-        const hand = arm.side === athlete.dominantArm ? shape.dominantHand : shape.otherHand;
-        arm.inGesture = hand !== null;
-        if (!hand) {
-          continue;
-        }
-        frame.place(hand, arm.outward, desired);
-        desired.addInPlaceFromFloats(moment.ball.x, moment.ball.y, moment.ball.z);
-        // A fresh gesture starts right on its target; afterwards the hands glide.
-        if (strength < GESTURE_RETARGET_BELOW_STRENGTH) {
-          arm.gestureTarget.copyFrom(desired);
-        } else {
-          Vector3.LerpToRef(arm.gestureTarget, desired, blend, arm.gestureTarget);
+        const dominant = arm.side === athlete.dominantArm;
+        arm.inGesture = handOffsetAt(shape, dominant, untilContactS, handOffset);
+        if (arm.inGesture) {
+          frame.place(handOffset, arm.outward, arm.gestureTarget).addInPlace(anchor);
         }
       }
     },
   };
 }
 
+function findBone(modelRoot: TransformNode, name: string): TransformNode {
+  const node = modelRoot.getDescendants(false, (candidate) => candidate.name === name)[0];
+  if (!(node instanceof TransformNode)) {
+    throw new Error(`Bone ${name} not found in ${modelRoot.name}`);
+  }
+  return node;
+}
+
 function createArm(modelRoot: TransformNode, side: Side): Arm {
   const names = CHARACTER_ARMS[side];
-  const find = (name: string): TransformNode => {
-    const node = modelRoot.getDescendants(false, (candidate) => candidate.name === name)[0];
-    if (!(node instanceof TransformNode)) {
-      throw new Error(`Bone ${name} not found in ${modelRoot.name}`);
-    }
-    return node;
-  };
+  const find = (name: string): TransformNode => findBone(modelRoot, name);
   const upper = find(names.upper);
   const lower = find(names.lower);
   const end = find(names.end);
