@@ -82,6 +82,12 @@ export const READY_FULL_BELOW_MPS = 1.6;
 export const READY_NONE_ABOVE_MPS = 3.2;
 /** How quickly the athlete settles into or leaves the ready stance, in s. */
 export const READY_SMOOTHING_S = 0.2;
+/**
+ * Moving, the athlete stands taller than when waiting (Noan): at this ground speed and above
+ * the ready crouch keeps only MOVING_CROUCH_SHARE of its depth, in m/s.
+ */
+export const MOVING_CROUCH_SPEED_MPS = 2;
+export const MOVING_CROUCH_SHARE = 0.5;
 
 export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
   /**

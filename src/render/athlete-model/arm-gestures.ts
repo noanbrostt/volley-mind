@@ -8,6 +8,8 @@ import {
   GESTURE_SMOOTHING_S,
   GESTURES,
   type GestureShape,
+  MOVING_CROUCH_SHARE,
+  MOVING_CROUCH_SPEED_MPS,
   type PalmShape,
   READY_FULL_BELOW_MPS,
   READY_NONE_ABOVE_MPS,
@@ -203,7 +205,7 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       readiness += (readyWanted - readiness) * smoothing(gameSeconds, READY_SMOOTHING_S);
 
       shape = moment ? GESTURES[moment.name] : null;
-      const readyCrouch = READY_STANCE.crouch * readiness;
+      const readyCrouch = READY_STANCE.crouch * readiness * crouchWhileMoving(athlete);
       crouch = shape ? lerp(readyCrouch, shape.crouch, strength) : readyCrouch;
       const readyLean = READY_STANCE.torsoLeanRad * readiness;
       torsoLean = shape ? lerp(readyLean, shape.torsoLeanRad, strength) : readyLean;
@@ -272,6 +274,13 @@ function directionFromFacing(athlete: AthleteState, x: number, z: number): numbe
   const sin = Math.sin(athlete.facing);
   const cos = Math.cos(athlete.facing);
   return Math.atan2(dx * cos - dz * sin, dx * sin + dz * cos);
+}
+
+/** Less crouched on the move than standing still: 1 at rest, MOVING_CROUCH_SHARE at speed. */
+function crouchWhileMoving(athlete: AthleteState): number {
+  const speed = Math.hypot(athlete.velocity.x, athlete.velocity.z);
+  const moving = Math.min(1, speed / MOVING_CROUCH_SPEED_MPS);
+  return 1 - (1 - MOVING_CROUCH_SHARE) * moving;
 }
 
 /** Full ready stance while walking, none at a run. */
