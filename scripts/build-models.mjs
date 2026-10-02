@@ -18,6 +18,7 @@ import {
 } from '@gltf-transform/functions';
 import sharp from 'sharp';
 import { dressAthlete } from './dress-athlete.mjs';
+import { slimAthlete } from './slim-athlete.mjs';
 
 const PACKS = 'asset-packs';
 const OUTPUT = 'public/models';
@@ -90,6 +91,7 @@ async function buildAthlete({ output, body, hair, hairColor }) {
   const document = await readGltf(path.join(BODY_DIR, body));
   const hairDocument = await readGltf(path.join(HAIR_DIR, hair));
   attachHair(document, hairDocument);
+  slimAthlete(document, { bodyMaterialPrefix: BODY_MATERIAL_PREFIX });
   dressAthlete(document, { bodyMaterialPrefix: BODY_MATERIAL_PREFIX, hairColor });
   await document.transform(
     textureCompress({
