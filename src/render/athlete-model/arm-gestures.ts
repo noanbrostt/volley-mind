@@ -16,6 +16,7 @@ import {
 } from '@config/athlete-gestures';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
+import { ancestorsOf, findBone } from './find-bone';
 import {
   elbowPoleAt,
   type GestureMoment,
@@ -237,14 +238,6 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
   };
 }
 
-function findBone(modelRoot: TransformNode, name: string): TransformNode {
-  const node = modelRoot.getDescendants(false, (candidate) => candidate.name === name)[0];
-  if (!(node instanceof TransformNode)) {
-    throw new Error(`Bone ${name} not found in ${modelRoot.name}`);
-  }
-  return node;
-}
-
 function createArm(modelRoot: TransformNode, side: Side): Arm {
   const names = CHARACTER_ARMS[side];
   const find = (name: string): TransformNode => findBone(modelRoot, name);
@@ -252,12 +245,7 @@ function createArm(modelRoot: TransformNode, side: Side): Arm {
   const lower = find(names.lower);
   const end = find(names.end);
   const finger = find(names.finger);
-  const ancestors: TransformNode[] = [];
-  for (let node = upper.parent; node; node = node.parent) {
-    if (node instanceof TransformNode) {
-      ancestors.unshift(node);
-    }
-  }
+  const ancestors = ancestorsOf(upper);
   // The model is still in its rest pose: palms face down, fingers point along the arm.
   for (const node of [...ancestors, upper, lower, end, finger]) {
     node.computeWorldMatrix(true);

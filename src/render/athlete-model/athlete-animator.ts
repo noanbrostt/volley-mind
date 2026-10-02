@@ -1,5 +1,6 @@
 import { AnimationGroupMask } from '@babylonjs/core/Animations/animationGroupMask';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { FOOTWORK_TURN_SHARE } from '@config/athlete-footwork';
 import { CROUCH_CLIP, CROUCH_MAX } from '@config/athlete-gestures';
 import {
   ANIMATION_CROSSFADE_S,
@@ -12,6 +13,8 @@ import { ATHLETE_BODY_RADIUS_M } from '@config/court-scene';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 import { createArmGestures } from './arm-gestures';
+import { createFootwork } from './footwork';
+import { createHeadLook } from './head-look';
 import type { AthleteModel } from './load-athlete-models';
 import { approachAngle, headingFor, pickLocomotionClip, stepCrossfade } from './locomotion';
 import { CHARACTER_LEGS } from './rig-bone-names';
@@ -42,7 +45,11 @@ export function createAthleteAnimator(
   model: AthleteModel,
   heading: TransformNode,
 ): AthleteAnimator {
+  // Order matters: each runs after the model's animations, in this order (the head looks
+  // from wherever the torso ended up).
   const arms = createArmGestures(model.root);
+  const footwork = createFootwork(model.root);
+  const headLook = createHeadLook(model.root);
   const groups = LOCOMOTION_CLIPS.map(({ name }) => {
     const group = model.clips.get(name);
     if (!group) {
@@ -70,6 +77,8 @@ export function createAthleteAnimator(
   return {
     update(athlete, world, { nowTick, stepSeconds, gameSeconds, timeScale }) {
       arms.update(athlete, world, nowTick, stepSeconds, gameSeconds);
+      footwork.update(athlete, world, gameSeconds, !athlete.recovery && arms.diveLean === 0);
+      headLook.update(world, gameSeconds);
       // Weights above 1 get normalized, so a crouch fraction f over the running clips (which
       // sum to 1) needs the weight f / (1 − f).
       const crouch = Math.min(arms.crouch, CROUCH_MAX);
@@ -86,7 +95,9 @@ export function createAthleteAnimator(
         heading.position.y = 0;
       } else {
         // A dive turns the body toward the ball; otherwise toward the run, squaring up.
-        const yaw = arms.diveLean > 0 ? arms.diveYaw : turn.yaw;
+        // With footwork the body stays nearly square and the feet carry it sideways.
+        const runTurn = turn.yaw * (1 - footwork.weight * (1 - FOOTWORK_TURN_SHARE));
+        const yaw = arms.diveLean > 0 ? arms.diveYaw : runTurn;
         heading.rotation.y = approachAngle(heading.rotation.y, yaw, turnBlend);
         // Tipping toward the floor before a dive; at contact it matches the lying pose.
         heading.rotation.x = (Math.PI / 2) * arms.diveLean;

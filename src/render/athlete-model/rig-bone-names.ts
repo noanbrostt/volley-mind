@@ -59,3 +59,12 @@ export const CHARACTER_LEGS: readonly string[] = [
 
 /** The lower back: the torso bends forward from here. */
 export const CHARACTER_SPINE = 'spine_01';
+
+/** The character's leg bones, by side: hip joint, knee joint, ankle joint, and the toes. */
+export const CHARACTER_LEG_CHAINS = {
+  right: { upper: 'thigh_r', lower: 'calf_r', end: 'foot_r', toes: 'ball_r' },
+  left: { upper: 'thigh_l', lower: 'calf_l', end: 'foot_l', toes: 'ball_l' },
+} as const;
+
+/** Bones that turn to look at the ball, and the chest the look is measured from. */
+export const CHARACTER_LOOK = { chest: 'spine_03', neck: 'neck_01', head: 'Head' } as const;
