@@ -19,6 +19,7 @@ import {
 } from '@config/athlete-gestures';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
+import { type ArmRig, captureArmRig, solveArm } from './arm-ik';
 import { ancestorsOf, findBone } from './find-bone';
 import {
   elbowPoleAt,
@@ -31,11 +32,9 @@ import {
   torsoAt,
   trackGesture,
 } from './gesture-timeline';
-import { type BoneFrame, captureBoneFrame, orientBone } from './orient-bone';
 import { readinessAt } from './readiness';
 import { CHARACTER_ARMS, CHARACTER_SPINE, CHARACTER_TWIST_SPINE } from './rig-bone-names';
 import { turnBone } from './turn-bone';
-import { type LimbChain, solveTwoBoneIk } from './two-bone-ik';
 
 export interface ArmGestures {
   /** Decides what the arms do now; they move after the model's animations are applied. */
@@ -62,8 +61,7 @@ interface Arm {
   readonly side: Side;
   /** +1 for the right arm, −1 for the left: mirrors the frame offsets. */
   readonly outward: number;
-  readonly chain: LimbChain;
-  readonly hand: BoneFrame;
+  readonly rig: ArmRig;
   /** Finger bones with their rest rotation: the model rests with flat, open hands. */
   readonly fingers: readonly Finger[];
   /** Where the gesture wants this hand right now, in world space. */
@@ -122,7 +120,6 @@ const handOffset: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const leanFrom = new Vector3();
 const leanTo = new Vector3();
 const torsoPose: TorsoPose = { leanRad: 0, twistRad: 0 };
-const DOWN = new Vector3(0, -1, 0);
 
 /**
  * Volleyball arms over the model's animation: the ready stance while the ball is in play,
@@ -134,7 +131,7 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
   if (!(body instanceof TransformNode)) {
     throw new Error(`Model ${modelRoot.name} needs a parent node that turns with the body`);
   }
-  const arms = (['right', 'left'] as const).map((side) => createArm(modelRoot, side));
+  const arms = (['right', 'left'] as const).map((side) => createArm(modelRoot, body, side));
   const spine = findBone(modelRoot, CHARACTER_SPINE);
   const upperSpine = findBone(modelRoot, CHARACTER_TWIST_SPINE);
   const frame = new FloorFrame();
@@ -188,11 +185,10 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       frame.place(mixedPole, arm.outward, pole);
       // The elbows point where they would with the trunk turned (the arms move with it).
       turnAroundVertical(pole, gesture > 0 ? torsoTwist : 0);
-      pole.addInPlace(arm.chain.upper.getAbsolutePosition());
-      solveTwoBoneIk(arm.chain, target, pole, weight);
+      pole.addInPlace(arm.rig.upper.bone.getAbsolutePosition());
 
       placePalm(frame, READY_STANCE.palm, gestureShape?.palm, gesture, arm.outward);
-      orientBone(arm.hand, fingersDirection, palmDirection, weight);
+      solveArm(arm.rig, target, pole, palmDirection, fingersDirection, weight);
       const open = lerp(READY_STANCE.fingersOpen, gestureShape?.fingersOpen ?? 0, gesture);
       openFingers(arm.fingers, weight * open);
     }
@@ -271,24 +267,28 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
   };
 }
 
-function createArm(modelRoot: TransformNode, side: Side): Arm {
+function createArm(modelRoot: TransformNode, body: TransformNode, side: Side): Arm {
   const names = CHARACTER_ARMS[side];
   const find = (name: string): TransformNode => findBone(modelRoot, name);
-  const upper = find(names.upper);
-  const lower = find(names.lower);
+  const clavicle = find(names.clavicle);
   const end = find(names.end);
-  const finger = find(names.finger);
-  const ancestors = ancestorsOf(upper);
-  // The model is still in its rest pose: palms face down, fingers point along the arm.
-  for (const node of [...ancestors, upper, lower, end, finger]) {
-    node.computeWorldMatrix(true);
-  }
-  const fingerDirection = finger.getAbsolutePosition().subtract(end.getAbsolutePosition());
+  body.computeWorldMatrix(true);
+  // The model is still in its rest pose: T-pose, palms down.
+  const rig = captureArmRig(
+    {
+      clavicle,
+      upper: find(names.upper),
+      lower: find(names.lower),
+      hand: end,
+      finger: find(names.finger),
+      ancestors: ancestorsOf(clavicle),
+    },
+    body.getDirection(Axis.Z),
+  );
   return {
     side,
     outward: side === 'right' ? 1 : -1,
-    chain: { upper, lower, end, ancestors },
-    hand: captureBoneFrame(end, fingerDirection, DOWN),
+    rig,
     fingers: end
       .getDescendants(false)
       .filter((node): node is TransformNode => node instanceof TransformNode)

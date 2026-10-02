@@ -305,6 +305,13 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
   },
 };
 
+// Human limits of the arm (see render/athlete-model/arm-ik.ts).
+/** The collarbone lifts by this share of the arm's elevation above horizontal... */
+export const SHOULDER_SHRUG_SHARE = 0.3;
+/** ...up to this much, in rad. */
+export const SHOULDER_SHRUG_MAX_RAD = (20 * Math.PI) / 180;
+/** The wrist bends at most this far from the forearm's line, in rad. */
+export const WRIST_MAX_BEND_RAD = (50 * Math.PI) / 180;
 /** Share of the trunk's turn taken by the lower back; the upper back takes the rest. */
 export const LOWER_BACK_TWIST_SHARE = 0.4;
 /** The follow-through takes this share of the recovery; the rest eases back. */
