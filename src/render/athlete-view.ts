@@ -4,12 +4,14 @@ import { CreateCapsule } from '@babylonjs/core/Meshes/Builders/capsuleBuilder';
 import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
+import { DIVE_GET_UP_S } from '@config/athlete-gestures';
 import {
   ATHLETE_BODY_RADIUS_M,
   ATHLETE_COLORS_HEX,
   ATHLETE_HEAD_RADIUS_M,
   ATHLETE_MESH_TESSELLATION,
 } from '@config/court-scene';
+import { SIMULATION_STEP_S } from '@config/simulation';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 import {
@@ -18,6 +20,7 @@ import {
   createAthleteAnimator,
 } from './athlete-model/athlete-animator';
 import type { AthleteModel } from './athlete-model/load-athlete-models';
+import { approachAngle } from './athlete-model/locomotion';
 
 /**
  * One view per athlete: the root stands at the feet and turns with the athlete; the pose
@@ -65,10 +68,15 @@ export function syncAthleteViews(
     );
     const { recovery } = to;
     if (recovery) {
-      // Lying stretched out along the dive: turn toward it and tip the body forward.
-      view.root.rotation.y = Math.atan2(recovery.direction.x, recovery.direction.z);
-      view.pose.rotation.x = Math.PI / 2;
-      view.pose.position.y = ATHLETE_BODY_RADIUS_M;
+      // Lying stretched out along the dive (turned toward it, tipped forward), then getting
+      // up over the end of the recovery, back toward the facing.
+      const nowTick = previous.tick + (current.tick - previous.tick) * alpha;
+      const remainingS = (recovery.untilTick - nowTick) * SIMULATION_STEP_S;
+      const lying = smoothstep(remainingS / DIVE_GET_UP_S);
+      const diveYaw = Math.atan2(recovery.direction.x, recovery.direction.z);
+      view.root.rotation.y = approachAngle(to.facing, diveYaw, lying);
+      view.pose.rotation.x = (Math.PI / 2) * lying;
+      view.pose.position.y = ATHLETE_BODY_RADIUS_M * lying;
     } else {
       // Babylon's yaw matches the domain's: facing 0 looks toward +z with +x on the right.
       view.root.rotation.y = to.facing;
@@ -94,11 +102,14 @@ export function dressAthleteViews(
     if (!view || !model || !athlete) {
       continue;
     }
-    model.root.parent = view.pose;
+    // The heading node turns the body toward where it runs, around the feet.
+    const heading = new TransformNode(`${view.root.name}-heading`, view.root.getScene());
+    heading.parent = view.pose;
+    model.root.parent = heading;
     // Scaling keeps the sign of the loader's handedness flip.
     model.root.scaling.scaleInPlace(athlete.heightM / model.heightM);
     view.placeholder.setEnabled(false);
-    view.animator = createAthleteAnimator(model);
+    view.animator = createAthleteAnimator(model, heading);
   }
 }
 
@@ -148,4 +159,9 @@ function createAthleteView(scene: Scene, athlete: AthleteState, colorHex: string
   root.position.set(athlete.position.x, 0, athlete.position.z);
   root.rotation.y = athlete.facing;
   return { root, pose, placeholder, animator: null };
+}
+
+function smoothstep(x: number): number {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
 }

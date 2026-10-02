@@ -37,10 +37,13 @@ function sideBones(clipSide: string, characterSide: string): [string, string][] 
   return bones;
 }
 
-/** The character's arm bones, by side: shoulder joint, elbow joint, wrist joint. */
+/**
+ * The character's arm bones, by side: shoulder joint, elbow joint, wrist joint, and the
+ * middle finger's base (it tells where the fingers point).
+ */
 export const CHARACTER_ARMS = {
-  right: { upper: 'upperarm_r', lower: 'lowerarm_r', end: 'hand_r' },
-  left: { upper: 'upperarm_l', lower: 'lowerarm_l', end: 'hand_l' },
+  right: { upper: 'upperarm_r', lower: 'lowerarm_r', end: 'hand_r', finger: 'middle_01_r' },
+  left: { upper: 'upperarm_l', lower: 'lowerarm_l', end: 'hand_l', finger: 'middle_01_l' },
 } as const;
 
 /** The character's leg bones (with the pelvis, which carries the crouch's height). */

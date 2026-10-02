@@ -65,3 +65,27 @@ export function stepCrossfade(
     weights[i] = (weights[i] ?? 0) / total;
   }
 }
+
+export interface Heading {
+  /** Body yaw relative to the athlete's facing, in rad (positive turns toward the right). */
+  readonly yaw: number;
+  /** Moving backward: the clips play in reverse while the body keeps facing forward. */
+  readonly reversed: boolean;
+}
+
+/**
+ * Which way the body points while moving `relativeAngle` away from the facing (0 = ahead,
+ * +π/2 = to the right): toward the movement when it is mostly ahead or sideways; otherwise
+ * facing ahead, backpedaling. `squareUp` (0–1) turns the body back toward the facing.
+ */
+export function headingFor(relativeAngle: number, maxTurn: number, squareUp: number): Heading {
+  const backward = Math.abs(relativeAngle) > maxTurn;
+  const turn = backward ? relativeAngle - Math.PI * Math.sign(relativeAngle) : relativeAngle;
+  return { yaw: turn * (1 - squareUp), reversed: backward };
+}
+
+/** Moves `current` toward `target` along the shortest way around the circle. */
+export function approachAngle(current: number, target: number, blend: number): number {
+  const difference = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + difference * blend;
+}

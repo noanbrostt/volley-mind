@@ -1,5 +1,6 @@
-import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
+import { turnBone } from './turn-bone';
 
 /** A limb of two bones: upper (shoulder joint), lower (elbow joint) and end (wrist joint). */
 export interface LimbChain {
@@ -20,17 +21,6 @@ const desiredElbow = new Vector3();
 const scaled = new Vector3();
 const from = new Vector3();
 const to = new Vector3();
-const IDENTITY = Quaternion.Identity();
-const fullTurn = new Quaternion();
-const partialTurn = new Quaternion();
-const turnMatrix = new Matrix();
-const toOrigin = new Matrix();
-const fromOrigin = new Matrix();
-const shifted = new Matrix();
-const turned = new Matrix();
-const newWorld = new Matrix();
-const inverseParent = new Matrix();
-const newLocal = new Matrix();
 const MIN_LENGTH_M = 1e-4;
 
 /**
@@ -96,42 +86,4 @@ function refresh(chain: LimbChain): void {
   chain.upper.computeWorldMatrix(true);
   chain.lower.computeWorldMatrix(true);
   chain.end.computeWorldMatrix(true);
-}
-
-/**
- * Rotates `bone` about its world `origin` so the direction `from` points along `to` (partly,
- * by `weight`), then stores the result as the bone's local rotation.
- */
-function turnBone(
-  bone: TransformNode,
-  origin: Vector3,
-  fromDirection: Vector3,
-  toDirection: Vector3,
-  weight: number,
-): void {
-  if (fromDirection.lengthSquared() < MIN_LENGTH_M || toDirection.lengthSquared() < MIN_LENGTH_M) {
-    return;
-  }
-  fromDirection.normalize();
-  toDirection.normalize();
-  Quaternion.FromUnitVectorsToRef(fromDirection, toDirection, fullTurn);
-  Quaternion.SlerpToRef(IDENTITY, fullTurn, weight, partialTurn);
-  // World' = World · T(−origin) · R · T(origin); Local' = World' · Parent⁻¹ (row vectors).
-  Matrix.TranslationToRef(-origin.x, -origin.y, -origin.z, toOrigin);
-  Matrix.FromQuaternionToRef(partialTurn, turnMatrix);
-  Matrix.TranslationToRef(origin.x, origin.y, origin.z, fromOrigin);
-  bone.getWorldMatrix().multiplyToRef(toOrigin, shifted);
-  shifted.multiplyToRef(turnMatrix, turned);
-  turned.multiplyToRef(fromOrigin, newWorld);
-  const parent = bone.parent;
-  if (parent) {
-    parent.getWorldMatrix().invertToRef(inverseParent);
-    newWorld.multiplyToRef(inverseParent, newLocal);
-  } else {
-    newLocal.copyFrom(newWorld);
-  }
-  if (!bone.rotationQuaternion) {
-    bone.rotationQuaternion = new Quaternion();
-  }
-  newLocal.decompose(undefined, bone.rotationQuaternion);
 }

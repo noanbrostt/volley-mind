@@ -34,3 +34,10 @@ export const LOCOMOTION_MIN_PLAYBACK_RATE = 0.6;
 export const LOCOMOTION_MAX_PLAYBACK_RATE = 1.6;
 /** Crossfade between clips, in s of game time: quick, but never a pop. */
 export const ANIMATION_CROSSFADE_S = 0.15;
+
+// Heading: athletes keep facing each other (a rule of the drill), but the body turns toward
+// where it runs and squares up again for the touch. Visual only.
+/** The body turns toward its running direction up to this angle from the facing, in rad. */
+export const HEADING_MAX_TURN_RAD = (100 * Math.PI) / 180;
+/** How quickly the body turns, in s of game time. */
+export const HEADING_SMOOTHING_S = 0.12;

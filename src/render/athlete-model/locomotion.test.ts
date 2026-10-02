@@ -4,7 +4,7 @@ import {
   type LocomotionClip,
 } from '@config/athlete-model';
 import { describe, expect, it } from 'vitest';
-import { pickLocomotionClip, stepCrossfade } from './locomotion';
+import { approachAngle, headingFor, pickLocomotionClip, stepCrossfade } from './locomotion';
 
 const CLIPS: readonly LocomotionClip[] = [
   { name: 'idle', speedMps: 0 },
@@ -46,5 +46,30 @@ describe('stepCrossfade', () => {
     const weights = [0.2, 0.5, 0.3];
     stepCrossfade(weights, 2, 0.01, 0.1);
     expect(weights.reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(1);
+  });
+});
+
+describe('headingFor', () => {
+  const MAX = Math.PI / 2 + 0.2;
+
+  it('turns toward a sideways run', () => {
+    expect(headingFor(Math.PI / 2, MAX, 0)).toEqual({ yaw: Math.PI / 2, reversed: false });
+  });
+
+  it('backpedals facing ahead when moving backward', () => {
+    const heading = headingFor(Math.PI * 0.9, MAX, 0);
+    expect(heading.reversed).toBe(true);
+    expect(heading.yaw).toBeCloseTo(-Math.PI * 0.1);
+  });
+
+  it('squares up for the touch', () => {
+    expect(headingFor(Math.PI / 2, MAX, 1).yaw).toBe(0);
+  });
+});
+
+describe('approachAngle', () => {
+  it('takes the short way around', () => {
+    expect(approachAngle(3, -3, 1)).toBeCloseTo(-3 + 2 * Math.PI);
+    expect(approachAngle(0, 1, 0.5)).toBeCloseTo(0.5);
   });
 });

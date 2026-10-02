@@ -1,11 +1,19 @@
 import { AnimationGroupMask } from '@babylonjs/core/Animations/animationGroupMask';
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { CROUCH_CLIP, CROUCH_MAX } from '@config/athlete-gestures';
-import { ANIMATION_CROSSFADE_S, LOCOMOTION_CLIPS } from '@config/athlete-model';
+import {
+  ANIMATION_CROSSFADE_S,
+  HEADING_MAX_TURN_RAD,
+  HEADING_SMOOTHING_S,
+  LOCOMOTION_CLIPS,
+  LOCOMOTION_STANDING_SPEED_MPS,
+} from '@config/athlete-model';
+import { ATHLETE_BODY_RADIUS_M } from '@config/court-scene';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
 import { createArmGestures } from './arm-gestures';
 import type { AthleteModel } from './load-athlete-models';
-import { pickLocomotionClip, stepCrossfade } from './locomotion';
+import { approachAngle, headingFor, pickLocomotionClip, stepCrossfade } from './locomotion';
 import { CHARACTER_LEGS } from './rig-bone-names';
 
 export interface AthleteAnimator {
@@ -27,9 +35,13 @@ export interface AnimationFrame {
 
 /**
  * Plays one model: locomotion clips crossfaded by the athlete's ground speed, with the
- * volleyball gestures over the arms.
+ * volleyball gestures over the arms. `heading` turns the body (around the feet) toward where
+ * it runs, relative to the athlete's facing.
  */
-export function createAthleteAnimator(model: AthleteModel): AthleteAnimator {
+export function createAthleteAnimator(
+  model: AthleteModel,
+  heading: TransformNode,
+): AthleteAnimator {
   const arms = createArmGestures(model.root);
   const groups = LOCOMOTION_CLIPS.map(({ name }) => {
     const group = model.clips.get(name);
@@ -65,6 +77,22 @@ export function createAthleteAnimator(model: AthleteModel): AthleteAnimator {
       crouchGroup.speedRatio = timeScale;
       const speed = Math.hypot(athlete.velocity.x, athlete.velocity.z);
       const pick = pickLocomotionClip(speed, LOCOMOTION_CLIPS);
+      const direction = runningDirection(athlete, speed);
+      const turn = headingFor(direction, HEADING_MAX_TURN_RAD, arms.strength);
+      const turnBlend = 1 - Math.exp(-gameSeconds / HEADING_SMOOTHING_S);
+      if (athlete.recovery) {
+        // Lying after a dive: the athlete view lays the whole body down.
+        heading.rotation.set(0, 0, 0);
+        heading.position.y = 0;
+      } else {
+        // A dive turns the body toward the ball; otherwise toward the run, squaring up.
+        const yaw = arms.diveLean > 0 ? arms.diveYaw : turn.yaw;
+        heading.rotation.y = approachAngle(heading.rotation.y, yaw, turnBlend);
+        // Tipping toward the floor before a dive; at contact it matches the lying pose.
+        heading.rotation.x = (Math.PI / 2) * arms.diveLean;
+        heading.position.y = ATHLETE_BODY_RADIUS_M * arms.diveLean;
+      }
+      const playDirection = turn.reversed ? -1 : 1;
       stepCrossfade(weights, pick.clipIndex, gameSeconds, ANIMATION_CROSSFADE_S);
       for (let i = 0; i < groups.length; i++) {
         const group = groups[i];
@@ -72,8 +100,21 @@ export function createAthleteAnimator(model: AthleteModel): AthleteAnimator {
           continue;
         }
         group.weight = weights[i] ?? 0;
-        group.speedRatio = (i === pick.clipIndex ? pick.playbackRate : 1) * timeScale;
+        group.speedRatio =
+          (i === pick.clipIndex ? pick.playbackRate : 1) * timeScale * playDirection;
       }
     },
   };
+}
+
+/** Running direction relative to the facing, in rad (0 = ahead, +π/2 = right); 0 at rest. */
+function runningDirection(athlete: AthleteState, speed: number): number {
+  if (speed < LOCOMOTION_STANDING_SPEED_MPS) {
+    return 0;
+  }
+  const sin = Math.sin(athlete.facing);
+  const cos = Math.cos(athlete.facing);
+  const ahead = athlete.velocity.x * sin + athlete.velocity.z * cos;
+  const toRight = athlete.velocity.x * cos - athlete.velocity.z * sin;
+  return Math.atan2(toRight, ahead);
 }
