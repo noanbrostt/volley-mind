@@ -1,7 +1,7 @@
 import {
+  READY_BY_ACTION,
   READY_LEAD_S,
   READY_RAMP_S,
-  READY_WHILE_PARTNER,
   RELAXED_READINESS,
 } from '@config/athlete-gestures';
 import { SIMULATION_STEP_S } from '@config/simulation';
@@ -34,8 +34,11 @@ function rallyWith(athleteId: string, action: Action): WorldState {
 }
 
 describe('readinessAt', () => {
-  it('is fully ready when the ball is theirs', () => {
-    expect(readinessAt(ATHLETE_A_ID, rallyWith(ATHLETE_A_ID, 'set'), 0, DT)).toBe(1);
+  it('is as ready as their own coming touch asks for', () => {
+    expect(readinessAt(ATHLETE_A_ID, rallyWith(ATHLETE_A_ID, 'dig'), 0, DT)).toBe(1);
+    expect(readinessAt(ATHLETE_A_ID, rallyWith(ATHLETE_A_ID, 'set'), 0, DT)).toBe(
+      READY_BY_ACTION.set,
+    );
   });
 
   it('relaxes while the partner plays, far from their touch', () => {
@@ -45,13 +48,13 @@ describe('readinessAt', () => {
     );
   });
 
-  it('is set before the partner attacks, less before a set', () => {
+  it('settles in for a dig before the partner attacks, less before attacking', () => {
     const set = CONTACT_TICK - READY_LEAD_S / DT;
     expect(readinessAt(ATHLETE_A_ID, rallyWith(ATHLETE_B_ID, 'attack'), set, DT)).toBeCloseTo(
-      READY_WHILE_PARTNER.attack,
+      READY_BY_ACTION.dig,
     );
     expect(readinessAt(ATHLETE_A_ID, rallyWith(ATHLETE_B_ID, 'set'), set, DT)).toBeCloseTo(
-      READY_WHILE_PARTNER.set,
+      READY_BY_ACTION.attack,
     );
   });
 

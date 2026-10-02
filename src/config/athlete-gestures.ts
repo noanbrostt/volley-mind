@@ -78,15 +78,15 @@ export const READY_STANCE = {
 } as const;
 
 /**
- * Reading the play (Noan): nobody holds the ready stance all the time. While the partner
- * plays, the athlete is relaxed and settles into the stance as the partner's touch nears,
- * fully when that touch is an attack coming at them. How ready to end up, by the partner's
- * action (0–1): their attack means a dig is next, their dig a set, their set an attack.
+ * Reading the play (Noan): the ready stance is for defending. Before a set the athlete is
+ * halfway into it, before an attack a quarter; never stiffly upright. While the partner
+ * plays, the athlete is relaxed and settles in as the partner's touch nears. How deep into
+ * the stance, by the athlete's own next action (0–1).
  */
-export const READY_WHILE_PARTNER: Readonly<Record<'attack' | 'dig' | 'set', number>> = {
-  attack: 1,
-  dig: 0.7,
-  set: 0.45,
+export const READY_BY_ACTION: Readonly<Record<'attack' | 'dig' | 'set', number>> = {
+  dig: 1,
+  set: 0.5,
+  attack: 0.25,
 };
 /** How ready a relaxed athlete still is, 0–1. */
 export const RELAXED_READINESS = 0.15;
