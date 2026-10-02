@@ -6,6 +6,7 @@ import {
   GESTURES,
   type GestureName,
   type GestureShape,
+  type WindupPose,
 } from '@config/athlete-gestures';
 import { Vec3 } from '@core/vec3';
 import type { AthleteState } from '@domain/athlete/athlete-state';
@@ -53,12 +54,15 @@ export function trackGesture(
 
 /**
  * How strongly the gesture overrides the running animation, 0–1: rising over the gesture's
- * preparation, full at contact, fading during the recovery.
+ * preparation (full by its first preparation pose, if any, so the arms follow that path
+ * rather than cutting through the body), full at contact, fading during the recovery.
  */
 export function gestureStrength(moment: GestureMoment, nowTick: number, stepSeconds: number) {
   const secondsToContact = (moment.contactTick - nowTick) * stepSeconds;
   if (secondsToContact >= 0) {
-    return smoothstep(1 - secondsToContact / GESTURES[moment.name].prepareS);
+    const shape = GESTURES[moment.name];
+    const fullAtS = shape.windup[0]?.atS ?? 0;
+    return smoothstep((shape.prepareS - secondsToContact) / (shape.prepareS - fullAtS));
   }
   return smoothstep(1 + secondsToContact / GESTURE_RECOVER_S);
 }
@@ -71,10 +75,80 @@ export function secondsToContact(moment: GestureMoment, nowTick: number, stepSec
 /** A frame offset written in place, so the per-frame gesture math allocates nothing. */
 export type MutableFrameOffset = { -readonly [Key in keyof FrameOffset]: number };
 
+/** A pose on the gesture's way to the ball; the contact itself is the last one (at 0 s). */
+type GestureKey = WindupPose;
+
+const keyCache = new WeakMap<GestureShape, readonly GestureKey[]>();
+
+/** The preparation poses followed by the contact pose, earliest first (built once per shape). */
+function keysOf(shape: GestureShape): readonly GestureKey[] {
+  let keys = keyCache.get(shape);
+  if (!keys) {
+    keys = [
+      ...shape.windup,
+      {
+        atS: 0,
+        dominantHand: shape.dominantHand,
+        otherHand: shape.otherHand,
+        elbowPole: shape.elbowPole,
+        torsoLeanRad: shape.torsoLeanRad,
+        torsoTwistRad: shape.torsoTwistRad,
+      },
+    ];
+    keyCache.set(shape, keys);
+  }
+  return keys;
+}
+
+/** The two poses around this moment before contact, and how far from one to the other. */
+interface KeySpan {
+  from: GestureKey;
+  to: GestureKey;
+  amount: number;
+}
+/** Starting value of the reused span; every read fills it with real poses first. */
+const NO_POSE: GestureKey = {
+  atS: 0,
+  dominantHand: null,
+  otherHand: null,
+  elbowPole: { forward: 0, outward: 0, up: 0 },
+  torsoLeanRad: 0,
+  torsoTwistRad: 0,
+};
+const span: KeySpan = { from: NO_POSE, to: NO_POSE, amount: 0 };
+
+function spanAt(shape: GestureShape, untilContactS: number): KeySpan {
+  const keys = keysOf(shape);
+  const first = keys[0];
+  const last = keys[keys.length - 1];
+  if (!first || !last) {
+    throw new Error('A gesture always has its contact pose');
+  }
+  span.from = first;
+  span.to = first;
+  span.amount = 0;
+  if (untilContactS >= first.atS) {
+    return span;
+  }
+  for (let i = 1; i < keys.length; i++) {
+    const from = keys[i - 1];
+    const to = keys[i];
+    if (from && to && untilContactS >= to.atS) {
+      span.from = from;
+      span.to = to;
+      span.amount = smoothstep((from.atS - untilContactS) / (from.atS - to.atS));
+      return span;
+    }
+  }
+  span.from = last;
+  span.to = last;
+  return span;
+}
+
 /**
  * Where one hand goes relative to the ball center at contact, at this moment of the gesture:
- * through the preparation (if any) and the swing, at the ball on contact, then on into the
- * follow-through. Writes into `out`; returns false when the gesture leaves this hand free.
+ * through the preparation poses, at the ball on contact, then on into the follow-through.
+ * Writes into `out`; returns false when the gesture leaves this hand free.
  */
 export function handOffsetAt(
   shape: GestureShape,
@@ -82,55 +156,67 @@ export function handOffsetAt(
   untilContactS: number,
   out: MutableFrameOffset,
 ): boolean {
-  const atContact = dominant ? shape.dominantHand : shape.otherHand;
-  const windup = shape.windup;
-  if (untilContactS > 0 && windup) {
-    const prepared = (dominant ? windup.dominantHand : windup.otherHand) ?? atContact;
-    if (!prepared) {
+  if (untilContactS > 0) {
+    const { from, to, amount } = spanAt(shape, untilContactS);
+    const fromHand = dominant ? from.dominantHand : from.otherHand;
+    const toHand = dominant ? to.dominantHand : to.otherHand;
+    // A hand the next pose sets free leaves the gesture (the spike's other arm drops).
+    if (!fromHand || !toHand) {
       return false;
     }
-    if (untilContactS >= windup.swingS) {
-      copyOffset(prepared, out);
-      return true;
-    }
-    if (!atContact) {
-      return false;
-    }
-    mixOffsets(prepared, atContact, smoothstep(1 - untilContactS / windup.swingS), out);
+    mixOffsets(fromHand, toHand, amount, out);
     return true;
   }
+  const atContact = dominant ? shape.dominantHand : shape.otherHand;
   if (!atContact) {
     return false;
   }
   copyOffset(atContact, out);
-  if (untilContactS < 0) {
-    const followed = smoothstep(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
-    out.forward += shape.followThrough.forward * followed;
-    out.outward += shape.followThrough.outward * followed;
-    out.up += shape.followThrough.up * followed;
-  }
+  const followed = followThroughAt(untilContactS);
+  out.forward += shape.followThrough.forward * followed;
+  out.outward += shape.followThrough.outward * followed;
+  out.up += shape.followThrough.up * followed;
   return true;
 }
 
-/** Where the elbows point at this moment: the preparation's pole until the swing. */
+/** Where the elbows point at this moment, following the preparation poses. */
 export function elbowPoleAt(
   shape: GestureShape,
   untilContactS: number,
   out: MutableFrameOffset,
 ): void {
-  const windup = shape.windup;
-  if (!windup || untilContactS <= 0) {
+  if (untilContactS <= 0) {
     copyOffset(shape.elbowPole, out);
-  } else if (untilContactS >= windup.swingS) {
-    copyOffset(windup.elbowPole, out);
-  } else {
-    mixOffsets(
-      windup.elbowPole,
-      shape.elbowPole,
-      smoothstep(1 - untilContactS / windup.swingS),
-      out,
-    );
+    return;
   }
+  const { from, to, amount } = spanAt(shape, untilContactS);
+  mixOffsets(from.elbowPole, to.elbowPole, amount, out);
+}
+
+/** The torso's forward bend and turn at this moment of the gesture, in rad. */
+export interface TorsoPose {
+  leanRad: number;
+  twistRad: number;
+}
+
+export function torsoAt(shape: GestureShape, untilContactS: number, out: TorsoPose): void {
+  if (untilContactS <= 0) {
+    out.leanRad = shape.torsoLeanRad;
+    out.twistRad =
+      shape.torsoTwistRad +
+      (shape.followThroughTwistRad - shape.torsoTwistRad) * followThroughAt(untilContactS);
+    return;
+  }
+  const { from, to, amount } = spanAt(shape, untilContactS);
+  out.leanRad = from.torsoLeanRad + (to.torsoLeanRad - from.torsoLeanRad) * amount;
+  out.twistRad = from.torsoTwistRad + (to.torsoTwistRad - from.torsoTwistRad) * amount;
+}
+
+/** How far into the follow-through, 0–1, at this moment after contact. */
+function followThroughAt(untilContactS: number): number {
+  return untilContactS >= 0
+    ? 0
+    : smoothstep(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
 }
 
 function copyOffset(from: FrameOffset, out: MutableFrameOffset): void {

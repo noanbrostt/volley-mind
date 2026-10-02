@@ -26,11 +26,13 @@ import {
   handOffsetAt,
   type MutableFrameOffset,
   secondsToContact,
+  type TorsoPose,
+  torsoAt,
   trackGesture,
 } from './gesture-timeline';
 import { type BoneFrame, captureBoneFrame, orientBone } from './orient-bone';
 import { readinessAt } from './readiness';
-import { CHARACTER_ARMS, CHARACTER_SPINE } from './rig-bone-names';
+import { CHARACTER_ARMS, CHARACTER_SPINE, CHARACTER_TWIST_SPINE } from './rig-bone-names';
 import { turnBone } from './turn-bone';
 import { type LimbChain, solveTwoBoneIk } from './two-bone-ik';
 
@@ -118,6 +120,8 @@ const mixedFingers: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const handOffset: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const leanFrom = new Vector3();
 const leanTo = new Vector3();
+const twistSide = new Vector3();
+const torsoPose: TorsoPose = { leanRad: 0, twistRad: 0 };
 const DOWN = new Vector3(0, -1, 0);
 
 /**
@@ -132,11 +136,14 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
   }
   const arms = (['right', 'left'] as const).map((side) => createArm(modelRoot, side));
   const spine = findBone(modelRoot, CHARACTER_SPINE);
+  const upperSpine = findBone(modelRoot, CHARACTER_TWIST_SPINE);
   const frame = new FloorFrame();
   /** The ball at contact, smoothed: predictions shift a little as the ball flies. */
   const anchor = new Vector3();
   const gesturePole: MutableOffset = { forward: 0, outward: 0, up: 0 };
   let torsoLean = 0;
+  /** Toward the athlete's right, in rad: a right-hander's attack turns that shoulder back. */
+  let torsoTwist = 0;
   let moment: GestureMoment | null = null;
   let shape: GestureShape | null = null;
   let strength = 0;
@@ -148,13 +155,22 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
 
   modelRoot.getScene().onAfterAnimationsObservable.add(() => {
     frame.fromBody(body);
-    if (torsoLean > 0) {
+    if (torsoLean !== 0) {
       // Bend forward from the lower back: turn "up" toward the front by the lean angle.
       leanFrom.set(0, 1, 0);
       leanTo.copyFrom(frame.forward).scaleInPlace(Math.sin(torsoLean));
       leanTo.y = Math.cos(torsoLean);
       spine.computeWorldMatrix(true);
       turnBone(spine, spine.getAbsolutePosition(), leanFrom, leanTo, 1);
+    }
+    if (torsoTwist !== 0) {
+      // Turn the chest around the vertical: "front" toward the front swung to the right.
+      leanFrom.copyFrom(frame.forward);
+      leanTo.copyFrom(frame.forward).scaleInPlace(Math.cos(torsoTwist));
+      frame.right.scaleToRef(Math.sin(torsoTwist), twistSide);
+      leanTo.addInPlace(twistSide);
+      upperSpine.computeWorldMatrix(true);
+      turnBone(upperSpine, upperSpine.getAbsolutePosition(), leanFrom, leanTo, 1);
     }
     for (const arm of arms) {
       const gestureShape = arm.inGesture ? shape : null;
@@ -210,7 +226,13 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       const readyCrouch = READY_STANCE.crouch * readiness * crouchWhileMoving(athlete);
       crouch = shape ? lerp(readyCrouch, shape.crouch, strength) : readyCrouch;
       const readyLean = READY_STANCE.torsoLeanRad * readiness;
-      torsoLean = shape ? lerp(readyLean, shape.torsoLeanRad, strength) : readyLean;
+      const untilContactS = moment ? secondsToContact(moment, nowTick, stepSeconds) : 0;
+      if (shape) {
+        torsoAt(shape, untilContactS, torsoPose);
+      }
+      torsoLean = shape ? lerp(readyLean, torsoPose.leanRad, strength) : readyLean;
+      const dominantSide = athlete.dominantArm === 'right' ? 1 : -1;
+      torsoTwist = shape ? torsoPose.twistRad * strength * dominantSide : 0;
       diveLean = moment?.name === 'dive' ? leanBeforeContact(moment, nowTick, stepSeconds) : 0;
       if (moment?.name === 'dive') {
         diveYaw = directionFromFacing(athlete, moment.ball.x, moment.ball.z);
@@ -228,7 +250,6 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       } else {
         Vector3.LerpToRef(anchor, desired, blend, anchor);
       }
-      const untilContactS = secondsToContact(moment, nowTick, stepSeconds);
       elbowPoleAt(shape, untilContactS, gesturePole);
       frame.fromFacing(athlete.facing);
       for (const arm of arms) {

@@ -10,6 +10,8 @@ import {
   gestureStrength,
   handOffsetAt,
   type MutableFrameOffset,
+  type TorsoPose,
+  torsoAt,
   trackGesture,
 } from './gesture-timeline';
 
@@ -82,12 +84,18 @@ describe('trackGesture', () => {
 });
 
 describe('gestureStrength', () => {
-  const moment: GestureMoment = { name: 'spike', ball: BALL, contactTick: 100 };
+  const moment: GestureMoment = { name: 'overhead', ball: BALL, contactTick: 100 };
 
   it('is full at contact and nothing well before or after', () => {
     expect(gestureStrength(moment, 100, DT)).toBe(1);
-    expect(gestureStrength(moment, 100 - GESTURES.spike.prepareS / DT - 1, DT)).toBe(0);
+    expect(gestureStrength(moment, 100 - GESTURES.overhead.prepareS / DT - 1, DT)).toBe(0);
     expect(gestureStrength(moment, 100 + GESTURE_RECOVER_S / DT + 1, DT)).toBe(0);
+  });
+
+  it('is already full at the first preparation pose of a gesture that has them', () => {
+    const spike: GestureMoment = { name: 'spike', ball: BALL, contactTick: 100 };
+    const firstPoseS = GESTURES.spike.windup[0]?.atS ?? 0;
+    expect(gestureStrength(spike, 100 - firstPoseS / DT, DT)).toBeCloseTo(1);
   });
 
   it('rises before contact', () => {
@@ -98,25 +106,32 @@ describe('gestureStrength', () => {
   });
 });
 
+function expectOffset(actual: MutableFrameOffset, expected: MutableFrameOffset): void {
+  expect(actual.forward).toBeCloseTo(expected.forward);
+  expect(actual.outward).toBeCloseTo(expected.outward);
+  expect(actual.up).toBeCloseTo(expected.up);
+}
+
 describe('handOffsetAt', () => {
   const spike = GESTURES.spike;
-  const windup = spike.windup;
+  const [, dropped, cocked] = spike.windup;
   const out = (): MutableFrameOffset => ({ forward: 0, outward: 0, up: 0 });
 
-  it('holds the preparation, then swings onto the ball at contact', () => {
-    if (!windup?.dominantHand || !spike.dominantHand) {
-      throw new Error('the spike has a windup');
+  it('passes through each preparation pose, then meets the ball at contact', () => {
+    if (!dropped?.dominantHand || !cocked?.dominantHand || !spike.dominantHand) {
+      throw new Error('the spike prepares in three poses');
     }
-    const prepared = out();
-    expect(handOffsetAt(spike, true, windup.swingS * 2, prepared)).toBe(true);
-    expect(prepared).toEqual(windup.dominantHand);
-    const atContact = out();
-    handOffsetAt(spike, true, 0, atContact);
-    expect(atContact).toEqual(spike.dominantHand);
+    const hand = out();
+    expect(handOffsetAt(spike, true, dropped.atS, hand)).toBe(true);
+    expectOffset(hand, dropped.dominantHand);
+    handOffsetAt(spike, true, cocked.atS, hand);
+    expectOffset(hand, cocked.dominantHand);
+    handOffsetAt(spike, true, 0, hand);
+    expectOffset(hand, spike.dominantHand);
   });
 
   it('lets the other arm of the spike go for the swing', () => {
-    expect(handOffsetAt(spike, false, windup ? windup.swingS * 2 : 1, out())).toBe(true);
+    expect(handOffsetAt(spike, false, cocked ? cocked.atS + 0.01 : 1, out())).toBe(true);
     expect(handOffsetAt(spike, false, 0.01, out())).toBe(false);
   });
 
@@ -129,12 +144,24 @@ describe('handOffsetAt', () => {
 });
 
 describe('elbowPoleAt', () => {
-  it('uses the preparation pole before the swing and the contact pole at contact', () => {
+  it('follows the preparation poses and ends on the contact pole', () => {
     const spike = GESTURES.spike;
     const pole: MutableFrameOffset = { forward: 0, outward: 0, up: 0 };
-    elbowPoleAt(spike, 1, pole);
-    expect(pole).toEqual(spike.windup?.elbowPole);
+    elbowPoleAt(spike, 5, pole);
+    expect(pole).toEqual(spike.windup[0]?.elbowPole);
     elbowPoleAt(spike, 0, pole);
     expect(pole).toEqual(spike.elbowPole);
+  });
+});
+
+describe('torsoAt', () => {
+  it('turns back while cocked and uncoils through the ball', () => {
+    const spike = GESTURES.spike;
+    const cocked = spike.windup[2];
+    const torso: TorsoPose = { leanRad: 0, twistRad: 0 };
+    torsoAt(spike, cocked?.atS ?? 0, torso);
+    expect(torso.twistRad).toBeCloseTo(cocked?.torsoTwistRad ?? 0);
+    torsoAt(spike, -GESTURE_RECOVER_S, torso);
+    expect(torso.twistRad).toBeCloseTo(spike.followThroughTwistRad);
   });
 });

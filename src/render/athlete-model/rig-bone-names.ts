@@ -68,3 +68,6 @@ export const CHARACTER_LEG_CHAINS = {
 
 /** Bones that turn to look at the ball, and the chest the look is measured from. */
 export const CHARACTER_LOOK = { chest: 'spine_03', neck: 'neck_01', head: 'Head' } as const;
+
+/** The upper back: the torso turns from here (the attack's shoulder rotation). */
+export const CHARACTER_TWIST_SPINE = 'spine_02';

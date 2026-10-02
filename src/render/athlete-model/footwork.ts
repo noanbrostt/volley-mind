@@ -14,6 +14,7 @@ import {
   STEP_TRIGGER_M,
 } from '@config/athlete-footwork';
 import type { AthleteState } from '@domain/athlete/athlete-state';
+import { upcomingAction } from '@simulation/upcoming-action';
 import type { WorldState } from '@simulation/world-state';
 import { ancestorsOf, findBone } from './find-bone';
 import {
@@ -119,7 +120,7 @@ export function createFootwork(modelRoot: TransformNode): Footwork {
       weight += (wanted - weight) * (1 - Math.exp(-gameSeconds / FOOTWORK_SMOOTHING_S));
       body.computeWorldMatrix(true);
       readFrame(body);
-      placeHomes(legs, athlete);
+      placeHomes(legs, athlete, upcomingAction(world, athlete.id) === 'attack');
       // Barely in use: the feet wait on their homes, ready to plant where the body is.
       if (weight < FOOTWORK_RESET_BELOW) {
         resetFeet(feet, homes);
@@ -165,10 +166,14 @@ function readFrame(body: TransformNode): void {
   feetCenter.copyFrom(body.getAbsolutePosition());
 }
 
-/** Each foot's home: a wide base, the dominant-side foot a little ahead (Noan). */
-function placeHomes(legs: readonly Leg[], athlete: AthleteState): void {
+/**
+ * Each foot's home: a wide base, one foot a little ahead (Noan) — the dominant-side one, or
+ * the other one to attack.
+ */
+function placeHomes(legs: readonly Leg[], athlete: AthleteState, attacking: boolean): void {
   for (const leg of legs) {
-    const ahead = (leg.side === athlete.dominantArm ? 0.5 : -0.5) * STANCE_STAGGER_M;
+    const leads = (leg.side === athlete.dominantArm) !== attacking;
+    const ahead = (leads ? 0.5 : -0.5) * STANCE_STAGGER_M;
     const side = STANCE_HALF_WIDTH_M * leg.outward;
     leg.home.x = feetCenter.x + forward.x * ahead + right.x * side;
     leg.home.z = feetCenter.z + forward.z * ahead + right.z * side;

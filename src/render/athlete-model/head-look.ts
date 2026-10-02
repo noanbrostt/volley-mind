@@ -2,6 +2,8 @@ import { Axis } from '@babylonjs/core/Maths/math.axis';
 import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import {
+  EYES_LOOK_RANGE_RAD,
+  HEAD_LOOK_EASE_IN_RAD,
   HEAD_LOOK_MAX_RAD,
   HEAD_LOOK_SMOOTHING_S,
   NECK_LOOK_SHARE,
@@ -29,8 +31,9 @@ const desired = new Vector3();
 const inverse = new Matrix();
 
 /**
- * Athletes always watch the ball (Noan): the neck and the head turn toward it, within what a
- * neck can do, the gaze gliding rather than snapping.
+ * Athletes always watch the ball (Noan), the eyes doing part of it: the neck and the head
+ * turn only for what lies beyond the eyes' range, within what a neck can do, and follow
+ * lazily rather than snapping.
  */
 export function createHeadLook(modelRoot: TransformNode): HeadLook {
   const body = modelRoot.parent;
@@ -53,14 +56,20 @@ export function createHeadLook(modelRoot: TransformNode): HeadLook {
     Vector3.TransformNormalToRef(chest.frontLocal, chest.bone.getWorldMatrix(), chestFront);
     chestFront.normalize();
     gaze.subtractToRef(head.bone.getAbsolutePosition(), toBall).normalize();
-    // Within the neck's reach: past the limit, look as far toward the ball as allowed.
+    // The eyes take the first part of the angle; the head turns for the rest, within the
+    // neck's reach.
     const angle = Math.acos(Math.min(1, Math.max(-1, Vector3.Dot(chestFront, toBall))));
-    const share = angle > HEAD_LOOK_MAX_RAD ? HEAD_LOOK_MAX_RAD / angle : 1;
+    const headAngle = Math.min(Math.max(0, angle - EYES_LOOK_RANGE_RAD), HEAD_LOOK_MAX_RAD);
+    if (headAngle <= 0) {
+      return;
+    }
+    const share = headAngle / angle;
     Vector3.SlerpToRef(chestFront, toBall, share, desired);
 
-    turnToward(neck, desired, NECK_LOOK_SHARE);
+    const easeIn = Math.min(1, headAngle / HEAD_LOOK_EASE_IN_RAD);
+    turnToward(neck, desired, NECK_LOOK_SHARE * easeIn);
     head.bone.computeWorldMatrix(true);
-    turnToward(head, desired, 1);
+    turnToward(head, desired, easeIn);
   });
 
   return {

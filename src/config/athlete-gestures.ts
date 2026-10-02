@@ -38,20 +38,26 @@ export interface GestureShape {
   readonly fingersOpen: number;
   /** Forward bend of the torso at contact, in rad. */
   readonly torsoLeanRad: number;
+  /** Turn of the torso toward the dominant side at contact, in rad (that shoulder back). */
+  readonly torsoTwistRad: number;
   /** Where the hands go after contact, relative to where they met the ball (frame offset). */
   readonly followThrough: FrameOffset;
-  /** A preparation the hands pass through before swinging to the ball; null = straight. */
-  readonly windup: GestureWindup | null;
+  /** Torso turn at the end of the follow-through, in rad. */
+  readonly followThroughTwistRad: number;
+  /** Poses the body passes through before contact, earliest first; empty = straight. */
+  readonly windup: readonly WindupPose[];
 }
 
-/** Cortada's "bow and arrow": the hitting hand back behind the head, the other one up. */
-export interface GestureWindup {
-  /** Hands during the preparation, relative to the ball center at contact; null = free. */
+/** One pose of a preparation (the attack's arm swing), reached some time before contact. */
+export interface WindupPose {
+  /** Seconds before contact the pose is reached. */
+  readonly atS: number;
+  /** Hands, relative to the ball center at contact; null = free. */
   readonly dominantHand: FrameOffset | null;
   readonly otherHand: FrameOffset | null;
   readonly elbowPole: FrameOffset;
-  /** The swing from the preparation to the ball lasts this long before contact, in s. */
-  readonly swingS: number;
+  readonly torsoLeanRad: number;
+  readonly torsoTwistRad: number;
 }
 
 /**
@@ -125,8 +131,10 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     crouch: 0.1,
     fingersOpen: 0.85,
     torsoLeanRad: 0,
+    torsoTwistRad: 0,
     followThrough: { forward: 0.12, outward: 0.02, up: 0.12 },
-    windup: null,
+    followThroughTwistRad: 0,
+    windup: [],
   },
   /** Manchete: low and wide, torso forward, arms straight and together in a platform. */
   bump: {
@@ -141,32 +149,63 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     crouch: 0.8,
     fingersOpen: 0.5,
     torsoLeanRad: 30 * (Math.PI / 180),
+    torsoTwistRad: 0,
     followThrough: { forward: 0.05, outward: 0, up: 0.08 },
-    windup: null,
+    followThroughTwistRad: 0,
+    windup: [],
   },
   /**
-   * Cortada: "bow and arrow" preparation, then the hitting arm swings to the ball and on
-   * down across the body.
+   * Cortada, standing (drill rule: no jump) and controlled. Circular arm swing, the one most
+   * elite players use (Journal of Sports Science and Medicine, 2022): the arm drops back,
+   * comes round behind with the elbow high, whips to the ball high and slightly ahead, and
+   * follows through down across the body, while the torso turns back and uncoils.
    */
   spike: {
-    prepareS: 0.7,
+    prepareS: 1,
     dominantHand: { forward: -0.08, outward: 0, up: -0.03 },
     otherHand: null,
-    elbowPole: { forward: -0.3, outward: 0.5, up: 0 },
+    elbowPole: { forward: -0.1, outward: 0.5, up: 0.2 },
     palm: {
       facing: { forward: 1, outward: 0, up: 0.2 },
       fingers: { forward: 0, outward: 0, up: 1 },
     },
-    crouch: 0,
+    crouch: 0.15,
     fingersOpen: 1,
-    torsoLeanRad: 0,
-    followThrough: { forward: 0.45, outward: -0.35, up: -1.1 },
-    windup: {
-      dominantHand: { forward: -0.55, outward: 0, up: -0.55 },
-      otherHand: { forward: 0.1, outward: 0.35, up: -0.25 },
-      elbowPole: { forward: -0.3, outward: 0.6, up: 0.3 },
-      swingS: 0.18,
-    },
+    // Weight moves onto the front foot and the shoulders square up through the ball.
+    torsoLeanRad: 10 * (Math.PI / 180),
+    torsoTwistRad: -5 * (Math.PI / 180),
+    followThrough: { forward: 0.45, outward: -0.4, up: -1.1 },
+    followThroughTwistRad: -25 * (Math.PI / 180),
+    windup: [
+      {
+        // From the ready stance the hitting arm first drops to the side of the body...
+        atS: 0.78,
+        dominantHand: { forward: -0.1, outward: 0.15, up: -1.45 },
+        otherHand: { forward: 0, outward: 0.45, up: -0.9 },
+        elbowPole: { forward: -0.2, outward: 0.5, up: -0.4 },
+        torsoLeanRad: 0,
+        torsoTwistRad: 10 * (Math.PI / 180),
+      },
+      {
+        // ...then back, behind the hip; the other arm rises toward the ball.
+        atS: 0.55,
+        dominantHand: { forward: -0.55, outward: 0.05, up: -1.45 },
+        otherHand: { forward: 0.1, outward: 0.45, up: -0.5 },
+        elbowPole: { forward: -0.5, outward: 0.4, up: -0.3 },
+        torsoLeanRad: -3 * (Math.PI / 180),
+        torsoTwistRad: 20 * (Math.PI / 180),
+      },
+      {
+        // Cocked: the arm comes round behind, elbow high, hand behind the head, the hitting
+        // shoulder turned back; the other arm points at the ball.
+        atS: 0.28,
+        dominantHand: { forward: -0.55, outward: -0.05, up: -0.55 },
+        otherHand: { forward: 0.15, outward: 0.4, up: -0.25 },
+        elbowPole: { forward: -0.2, outward: 0.7, up: 0.6 },
+        torsoLeanRad: -6 * (Math.PI / 180),
+        torsoTwistRad: 35 * (Math.PI / 180),
+      },
+    ],
   },
   /** Largada (roll shot): like the spike, but the hand softly behind and under the ball. */
   'roll-shot': {
@@ -181,8 +220,10 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     crouch: 0,
     fingersOpen: 0.8,
     torsoLeanRad: 0,
+    torsoTwistRad: 0,
     followThrough: { forward: 0.15, outward: 0, up: 0.05 },
-    windup: null,
+    followThroughTwistRad: 0,
+    windup: [],
   },
   /** Peixinho: both arms stretched toward the ball. */
   dive: {
@@ -197,8 +238,10 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     crouch: 0.9,
     fingersOpen: 0.8,
     torsoLeanRad: 0,
+    torsoTwistRad: 0,
     followThrough: { forward: 0, outward: 0, up: 0 },
-    windup: null,
+    followThroughTwistRad: 0,
+    windup: [],
   },
   /** Auto-lançamento: both hands under the ball, lifting it. */
   'self-toss': {
@@ -213,8 +256,10 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     crouch: 0.3,
     fingersOpen: 1,
     torsoLeanRad: 0,
+    torsoTwistRad: 0,
     followThrough: { forward: 0, outward: 0, up: 0.35 },
-    windup: null,
+    followThroughTwistRad: 0,
+    windup: [],
   },
 };
 
