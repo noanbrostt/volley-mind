@@ -12,7 +12,11 @@ import {
 } from '@config/court-scene';
 import type { AthleteState } from '@domain/athlete/athlete-state';
 import type { WorldState } from '@simulation/world-state';
-import { type AthleteAnimator, createAthleteAnimator } from './athlete-model/athlete-animator';
+import {
+  type AnimationFrame,
+  type AthleteAnimator,
+  createAthleteAnimator,
+} from './athlete-model/athlete-animator';
 import type { AthleteModel } from './athlete-model/load-athlete-models';
 
 /**
@@ -94,7 +98,7 @@ export function dressAthleteViews(
     // Scaling keeps the sign of the loader's handedness flip.
     model.root.scaling.scaleInPlace(athlete.heightM / model.heightM);
     view.placeholder.setEnabled(false);
-    view.animator = createAthleteAnimator(model.clips);
+    view.animator = createAthleteAnimator(model);
   }
 }
 
@@ -102,13 +106,12 @@ export function dressAthleteViews(
 export function animateAthleteViews(
   views: AthleteViews,
   current: WorldState,
-  gameSeconds: number,
-  timeScale: number,
+  frame: AnimationFrame,
 ): void {
   for (let i = 0; i < views.length; i++) {
     const athlete = current.athletes[i];
     if (athlete) {
-      views[i]?.animator?.update(athlete, gameSeconds, timeScale);
+      views[i]?.animator?.update(athlete, current, frame);
     }
   }
 }

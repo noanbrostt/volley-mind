@@ -22,6 +22,9 @@ import type { FpsCounter } from '@ui/fps-counter';
 
 const MILLISECONDS_PER_SECOND = 1000;
 const FPS_QUERY_PARAM = 'fps';
+/** ?demo in the address: the AI plays both athletes, to watch the drill. */
+const DEMO_QUERY_PARAM = 'demo';
+const queryParams = new URLSearchParams(window.location.search);
 const UINT32_RANGE = 2 ** 32;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
@@ -40,7 +43,7 @@ const PLAYER_ATHLETE_ID = ATHLETE_A_ID;
 const world = createWorld({
   // Only the session seed comes from outside the simulation; everything after is deterministic.
   seed: Math.floor(Math.random() * UINT32_RANGE),
-  aiAthleteIds: [ATHLETE_B_ID],
+  aiAthleteIds: queryParams.has(DEMO_QUERY_PARAM) ? [ATHLETE_A_ID, ATHLETE_B_ID] : [ATHLETE_B_ID],
 });
 const view = createCourtScene(engine, world, PLAYER_ATHLETE_ID);
 
@@ -87,7 +90,7 @@ if (import.meta.env.DEV) {
 // The FPS readout: always in development; in the published game only with ?fps in the
 // address, to measure on real phones. Loaded on demand so normal play never pays for it.
 let fpsCounter: FpsCounter | null = null;
-if (import.meta.env.DEV || new URLSearchParams(window.location.search).has(FPS_QUERY_PARAM)) {
+if (import.meta.env.DEV || queryParams.has(FPS_QUERY_PARAM)) {
   void import('@ui/fps-counter').then(({ createFpsCounter }) => {
     fpsCounter = createFpsCounter(document.body);
   });
@@ -114,7 +117,12 @@ engine.runRenderLoop(() => {
 
   syncBallView(view.ball, runner.previous, runner.current, runner.alpha);
   syncAthleteViews(view.athletes, runner.previous, runner.current, runner.alpha);
-  animateAthleteViews(view.athletes, runner.current, gameSeconds, timeScale);
+  animateAthleteViews(view.athletes, runner.current, {
+    nowTick: runner.previous.tick + (runner.current.tick - runner.previous.tick) * runner.alpha,
+    stepSeconds: SIMULATION_STEP_S,
+    gameSeconds,
+    timeScale,
+  });
   syncContactCue(view.contactCue, runner.current, PLAYER_ATHLETE_ID, runner.alpha);
   view.camera.update(runner.current, frameSeconds);
   view.scene.render();

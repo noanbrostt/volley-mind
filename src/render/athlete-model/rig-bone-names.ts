@@ -36,3 +36,20 @@ function sideBones(clipSide: string, characterSide: string): [string, string][] 
   }
   return bones;
 }
+
+/** The character's arm bones, by side: shoulder joint, elbow joint, wrist joint. */
+export const CHARACTER_ARMS = {
+  right: { upper: 'upperarm_r', lower: 'lowerarm_r', end: 'hand_r' },
+  left: { upper: 'upperarm_l', lower: 'lowerarm_l', end: 'hand_l' },
+} as const;
+
+/** The character's leg bones (with the pelvis, which carries the crouch's height). */
+export const CHARACTER_LEGS: readonly string[] = [
+  'pelvis',
+  ...['l', 'r'].flatMap((side) => [
+    `thigh_${side}`,
+    `calf_${side}`,
+    `foot_${side}`,
+    `ball_${side}`,
+  ]),
+];
