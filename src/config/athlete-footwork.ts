@@ -11,15 +11,20 @@ export const STANCE_HALF_WIDTH_M = 0.22;
  */
 export const STANCE_STAGGER_M = 0.16;
 
-// Fewer, longer steps (Noan): a foot waits until the body is well away before stepping.
+// Efficient steps (Noan): each one lands where the body will be, so a move takes few, purposeful
+// steps; small adjusting steps are still fine.
 /** A planted foot steps once its home spot has moved this far away, in m. */
-export const STEP_TRIGGER_M = 0.3;
-/** How long a step takes in the air, in s of game time. */
+export const STEP_TRIGGER_M = 0.16;
+/** How long a step takes in the air when barely moving, in s of game time... */
 export const STEP_DURATION_S = 0.26;
+/** ...and at a fast move, in s: the cadence quickens with the speed. */
+export const STEP_FAST_DURATION_S = 0.17;
+/** Body speed at which steps are quickest, in m/s. */
+export const STEP_FAST_SPEED_MPS = 2.5;
 /** How high the foot lifts mid-step, in m. */
 export const STEP_HEIGHT_M = 0.08;
-/** A step lands where the home spot will be this long from now, so the feet lead the body, in s. */
-export const STEP_LEAD_S = 0.18;
+/** A step lands this far ahead of where the body will be on landing, in s of travel. */
+export const STEP_LEAD_S = 0.08;
 
 /** How far the knees point outward from straight ahead, as a share of the forward pull. */
 export const KNEE_OUTWARD_SHARE = 0.25;

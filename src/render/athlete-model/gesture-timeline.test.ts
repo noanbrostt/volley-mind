@@ -130,6 +130,17 @@ describe('handOffsetAt', () => {
     expectOffset(hand, spike.dominantHand);
   });
 
+  it('whips into the ball: slow at first, fastest at contact', () => {
+    if (!cocked?.dominantHand || !spike.dominantHand) {
+      throw new Error('the spike is cocked before contact');
+    }
+    const hand = out();
+    handOffsetAt(spike, true, cocked.atS / 2, hand);
+    const swing = spike.dominantHand.up - cocked.dominantHand.up;
+    const covered = (hand.up - cocked.dominantHand.up) / swing;
+    expect(covered).toBeLessThan(0.25);
+  });
+
   it('lets the other arm of the spike go for the swing', () => {
     expect(handOffsetAt(spike, false, cocked ? cocked.atS + 0.01 : 1, out())).toBe(true);
     expect(handOffsetAt(spike, false, 0.01, out())).toBe(false);

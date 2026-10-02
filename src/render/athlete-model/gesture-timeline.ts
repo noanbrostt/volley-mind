@@ -136,7 +136,10 @@ function spanAt(shape: GestureShape, untilContactS: number): KeySpan {
     if (from && to && untilContactS >= to.atS) {
       span.from = from;
       span.to = to;
-      span.amount = smoothstep((from.atS - untilContactS) / (from.atS - to.atS));
+      const progress = (from.atS - untilContactS) / (from.atS - to.atS);
+      // Into the ball the limb accelerates all the way (fastest at contact, Noan); the
+      // preparation poses ease in and out.
+      span.amount = to.atS === 0 && from !== to ? accelerate(progress) : smoothstep(progress);
       return span;
     }
   }
@@ -212,11 +215,26 @@ export function torsoAt(shape: GestureShape, untilContactS: number, out: TorsoPo
   out.twistRad = from.torsoTwistRad + (to.torsoTwistRad - from.torsoTwistRad) * amount;
 }
 
-/** How far into the follow-through, 0–1, at this moment after contact. */
+/**
+ * How far into the follow-through, 0–1, at this moment after contact: leaving the ball at
+ * full speed and slowing down.
+ */
 function followThroughAt(untilContactS: number): number {
   return untilContactS >= 0
     ? 0
-    : smoothstep(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
+    : decelerate(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
+}
+
+/** Starts slow, fastest at the end (a whip). */
+function accelerate(x: number): number {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * t;
+}
+
+/** Starts fastest, slows to a stop. */
+function decelerate(x: number): number {
+  const t = 1 - Math.min(1, Math.max(0, x));
+  return 1 - t * t * t;
 }
 
 function copyOffset(from: FrameOffset, out: MutableFrameOffset): void {

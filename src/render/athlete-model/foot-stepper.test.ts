@@ -9,7 +9,13 @@ import {
   stepFeet,
 } from './foot-stepper';
 
-const RULES: StepRules = { triggerM: 0.1, durationS: 0.2, leadS: 0 };
+const RULES: StepRules = {
+  triggerM: 0.1,
+  durationS: 0.2,
+  fastDurationS: 0.2,
+  fastSpeedMps: 2,
+  leadS: 0,
+};
 const DT = 1 / 60;
 const STILL: FloorPoint = { x: 0, z: 0 };
 
@@ -63,29 +69,32 @@ describe('stepFeet', () => {
     expect(feet[0].step).not.toBeNull();
   });
 
-  it('leads the landing spot with the body velocity', () => {
+  it('lands where the body will be when the foot comes down', () => {
     const feet = feetAt({ x: 0, z: 0 }, { x: 0.4, z: 0 });
-    stepFeet(
-      feet,
-      [
-        { x: 0.3, z: 0 },
-        { x: 0.4, z: 0 },
-      ],
-      { x: 2, z: 0 },
-      DT,
-      {
-        ...RULES,
-        leadS: 0.1,
-      },
-    );
-    expect(feet[0].step?.to.x).toBeCloseTo(0.5);
+    const homes: [FloorPoint, FloorPoint] = [
+      { x: 0.3, z: 0 },
+      { x: 0.4, z: 0 },
+    ];
+    stepFeet(feet, homes, { x: 2, z: 0 }, DT, { ...RULES, leadS: 0.1 });
+    // 0.2 s in the air plus 0.1 s of lead, at 2 m/s: 0.6 m beyond the home spot.
+    expect(feet[0].step?.to.x).toBeCloseTo(0.9);
+  });
+
+  it('steps quicker when moving fast', () => {
+    const feet = feetAt({ x: 0, z: 0 }, { x: 0.4, z: 0 });
+    const homes: [FloorPoint, FloorPoint] = [
+      { x: 0.3, z: 0 },
+      { x: 0.4, z: 0 },
+    ];
+    stepFeet(feet, homes, { x: 2, z: 0 }, DT, { ...RULES, fastDurationS: 0.1 });
+    expect(feet[0].step?.durationS).toBeCloseTo(0.1);
   });
 });
 
 describe('footPosition', () => {
   it('lifts the foot in an arc and moves it along the floor', () => {
     const foot = createFoot({ x: 0, z: 0 });
-    foot.step = { from: { x: 0, z: 0 }, to: { x: 1, z: 0 }, progress: 0.5 };
+    foot.step = { from: { x: 0, z: 0 }, to: { x: 1, z: 0 }, durationS: 0.2, progress: 0.5 };
     const at: FloorPoint = { x: 0, z: 0 };
     expect(footPosition(foot, at)).toBeCloseTo(1);
     expect(at.x).toBeCloseTo(0.5);

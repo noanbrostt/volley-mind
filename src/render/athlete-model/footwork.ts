@@ -9,6 +9,8 @@ import {
   STANCE_HALF_WIDTH_M,
   STANCE_STAGGER_M,
   STEP_DURATION_S,
+  STEP_FAST_DURATION_S,
+  STEP_FAST_SPEED_MPS,
   STEP_HEIGHT_M,
   STEP_LEAD_S,
   STEP_TRIGGER_M,
@@ -43,6 +45,8 @@ const FOOTWORK_RESET_BELOW = 0.02;
 const RULES: StepRules = {
   triggerM: STEP_TRIGGER_M,
   durationS: STEP_DURATION_S,
+  fastDurationS: STEP_FAST_DURATION_S,
+  fastSpeedMps: STEP_FAST_SPEED_MPS,
   leadS: STEP_LEAD_S,
 };
 

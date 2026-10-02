@@ -161,7 +161,7 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
    * follows through down across the body, while the torso turns back and uncoils.
    */
   spike: {
-    prepareS: 1,
+    prepareS: 1.15,
     dominantHand: { forward: -0.08, outward: 0, up: -0.03 },
     otherHand: null,
     elbowPole: { forward: -0.1, outward: 0.5, up: 0.2 },
@@ -178,8 +178,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     followThroughTwistRad: -25 * (Math.PI / 180),
     windup: [
       {
-        // From the ready stance the hitting arm first drops to the side of the body...
-        atS: 0.78,
+        // The wind-up is unhurried (Noan). From the ready stance the hitting arm first drops
+        // to the side of the body...
+        atS: 0.9,
         dominantHand: { forward: -0.1, outward: 0.15, up: -1.45 },
         otherHand: { forward: 0, outward: 0.45, up: -0.9 },
         elbowPole: { forward: -0.2, outward: 0.5, up: -0.4 },
@@ -188,7 +189,7 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
       },
       {
         // ...then back, behind the hip; the other arm rises toward the ball.
-        atS: 0.55,
+        atS: 0.6,
         dominantHand: { forward: -0.55, outward: 0.05, up: -1.45 },
         otherHand: { forward: 0.1, outward: 0.45, up: -0.5 },
         elbowPole: { forward: -0.5, outward: 0.4, up: -0.3 },
@@ -197,8 +198,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
       },
       {
         // Cocked: the arm comes round behind, elbow high, hand behind the head, the hitting
-        // shoulder turned back; the other arm points at the ball.
-        atS: 0.28,
+        // shoulder turned back; the other arm points at the ball. From here the whip to the
+        // ball is short and as fast as the athlete can make it.
+        atS: 0.17,
         dominantHand: { forward: -0.55, outward: -0.05, up: -0.55 },
         otherHand: { forward: 0.15, outward: 0.4, up: -0.25 },
         elbowPole: { forward: -0.2, outward: 0.7, up: 0.6 },

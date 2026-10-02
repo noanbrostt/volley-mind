@@ -7,6 +7,8 @@ export interface FloorPoint {
 export interface FootStep {
   readonly from: FloorPoint;
   readonly to: FloorPoint;
+  /** How long this step takes in the air, in s. */
+  readonly durationS: number;
   /** Progress through the step, 0–1. */
   progress: number;
 }
@@ -20,9 +22,13 @@ export interface Foot {
 export interface StepRules {
   /** A planted foot steps once its home spot is this far away, in m. */
   readonly triggerM: number;
-  /** Time in the air per step, in s. */
+  /** Time in the air per step when barely moving, in s... */
   readonly durationS: number;
-  /** Steps land where the home spot will be this long from now, in s. */
+  /** ...shortening to this at a fast move, in s (the cadence follows the speed). */
+  readonly fastDurationS: number;
+  /** Body speed at which steps are quickest, in m/s. */
+  readonly fastSpeedMps: number;
+  /** Steps land this far ahead of where the body will be on landing, in s of travel. */
   readonly leadS: number;
 }
 
@@ -49,7 +55,7 @@ export function stepFeet(
     if (!step) {
       continue;
     }
-    step.progress = Math.min(1, step.progress + seconds / rules.durationS);
+    step.progress = Math.min(1, step.progress + seconds / step.durationS);
     if (step.progress >= 1) {
       foot.planted.x = step.to.x;
       foot.planted.z = step.to.z;
@@ -66,9 +72,16 @@ export function stepFeet(
   if (!foot || !home || (distances[first] ?? 0) < rules.triggerM) {
     return;
   }
+  // The body keeps moving while the foot is in the air: aim where the home spot will be on
+  // landing (and a little beyond), or the foot lands behind and the leg trails.
+  const speed = Math.hypot(velocity.x, velocity.z);
+  const pace = Math.min(1, speed / rules.fastSpeedMps);
+  const durationS = rules.durationS + (rules.fastDurationS - rules.durationS) * pace;
+  const travelS = durationS + rules.leadS;
   foot.step = {
     from: { x: foot.planted.x, z: foot.planted.z },
-    to: { x: home.x + velocity.x * rules.leadS, z: home.z + velocity.z * rules.leadS },
+    to: { x: home.x + velocity.x * travelS, z: home.z + velocity.z * travelS },
+    durationS,
     progress: 0,
   };
 }
