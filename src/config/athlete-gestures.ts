@@ -77,6 +77,24 @@ export const READY_STANCE = {
   torsoLeanRad: 12 * (Math.PI / 180),
 } as const;
 
+/**
+ * Reading the play (Noan): nobody holds the ready stance all the time. While the partner
+ * plays, the athlete is relaxed and settles into the stance as the partner's touch nears,
+ * fully when that touch is an attack coming at them. How ready to end up, by the partner's
+ * action (0–1): their attack means a dig is next, their dig a set, their set an attack.
+ */
+export const READY_WHILE_PARTNER: Readonly<Record<'attack' | 'dig' | 'set', number>> = {
+  attack: 1,
+  dig: 0.7,
+  set: 0.45,
+};
+/** How ready a relaxed athlete still is, 0–1. */
+export const RELAXED_READINESS = 0.15;
+/** The athlete is set this long before the partner's touch, in s... */
+export const READY_LEAD_S = 0.15;
+/** ...after settling in over this time, in s. */
+export const READY_RAMP_S = 0.8;
+
 /** The ready stance holds while walking and gives way to running arms above jogging pace. */
 export const READY_FULL_BELOW_MPS = 1.6;
 export const READY_NONE_ABOVE_MPS = 3.2;

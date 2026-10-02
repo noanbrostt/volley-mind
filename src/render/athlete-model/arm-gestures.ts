@@ -29,6 +29,7 @@ import {
   trackGesture,
 } from './gesture-timeline';
 import { type BoneFrame, captureBoneFrame, orientBone } from './orient-bone';
+import { readinessAt } from './readiness';
 import { CHARACTER_ARMS, CHARACTER_SPINE } from './rig-bone-names';
 import { turnBone } from './turn-bone';
 import { type LimbChain, solveTwoBoneIk } from './two-bone-ik';
@@ -201,7 +202,8 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       const blend = smoothing(gameSeconds, GESTURE_SMOOTHING_S);
       const wanted = moment ? gestureStrength(moment, nowTick, stepSeconds) : 0;
       strength += (wanted - strength) * blend;
-      const readyWanted = world.drill.phase === 'rally' ? readyForSpeed(athlete) : 0;
+      const readyWanted =
+        readinessAt(athlete.id, world, nowTick, stepSeconds) * readyForSpeed(athlete);
       readiness += (readyWanted - readiness) * smoothing(gameSeconds, READY_SMOOTHING_S);
 
       shape = moment ? GESTURES[moment.name] : null;
