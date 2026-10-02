@@ -8,6 +8,7 @@ import {
   GESTURE_SMOOTHING_S,
   GESTURES,
   type GestureShape,
+  LOWER_BACK_TWIST_SHARE,
   MOVING_CROUCH_SHARE,
   MOVING_CROUCH_SPEED_MPS,
   type PalmShape,
@@ -120,7 +121,6 @@ const mixedFingers: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const handOffset: MutableOffset = { forward: 0, outward: 0, up: 0 };
 const leanFrom = new Vector3();
 const leanTo = new Vector3();
-const twistSide = new Vector3();
 const torsoPose: TorsoPose = { leanRad: 0, twistRad: 0 };
 const DOWN = new Vector3(0, -1, 0);
 
@@ -164,13 +164,10 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       turnBone(spine, spine.getAbsolutePosition(), leanFrom, leanTo, 1);
     }
     if (torsoTwist !== 0) {
-      // Turn the chest around the vertical: "front" toward the front swung to the right.
-      leanFrom.copyFrom(frame.forward);
-      leanTo.copyFrom(frame.forward).scaleInPlace(Math.cos(torsoTwist));
-      frame.right.scaleToRef(Math.sin(torsoTwist), twistSide);
-      leanTo.addInPlace(twistSide);
-      upperSpine.computeWorldMatrix(true);
-      turnBone(upperSpine, upperSpine.getAbsolutePosition(), leanFrom, leanTo, 1);
+      // The whole trunk turns, not just the shoulders: part from the lower back, the rest
+      // from the upper back.
+      twistBone(spine, frame, torsoTwist * LOWER_BACK_TWIST_SHARE);
+      twistBone(upperSpine, frame, torsoTwist * (1 - LOWER_BACK_TWIST_SHARE));
     }
     for (const arm of arms) {
       const gestureShape = arm.inGesture ? shape : null;
@@ -189,6 +186,8 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
       const armPole = gestureShape ? gesturePole : undefined;
       mixOffsets(READY_STANCE.elbowPole, armPole, gesture, mixedPole);
       frame.place(mixedPole, arm.outward, pole);
+      // The elbows point where they would with the trunk turned (the arms move with it).
+      turnAroundVertical(pole, gesture > 0 ? torsoTwist : 0);
       pole.addInPlace(arm.chain.upper.getAbsolutePosition());
       solveTwoBoneIk(arm.chain, target, pole, weight);
 
@@ -257,6 +256,15 @@ export function createArmGestures(modelRoot: TransformNode): ArmGestures {
         arm.inGesture = handOffsetAt(shape, dominant, untilContactS, handOffset);
         if (arm.inGesture) {
           frame.place(handOffset, arm.outward, arm.gestureTarget).addInPlace(anchor);
+          // The hands move with the turning trunk, around the body's vertical axis.
+          arm.gestureTarget.subtractFromFloatsToRef(
+            athlete.position.x,
+            0,
+            athlete.position.z,
+            arm.gestureTarget,
+          );
+          turnAroundVertical(arm.gestureTarget, torsoTwist);
+          arm.gestureTarget.addInPlaceFromFloats(athlete.position.x, 0, athlete.position.z);
         }
       }
     },
@@ -304,6 +312,25 @@ function crouchWhileMoving(athlete: AthleteState): number {
   const speed = Math.hypot(athlete.velocity.x, athlete.velocity.z);
   const moving = Math.min(1, speed / MOVING_CROUCH_SPEED_MPS);
   return 1 - (1 - MOVING_CROUCH_SHARE) * moving;
+}
+
+/** Turns a vector around the vertical, positive toward the athlete's right (clockwise from above). */
+function turnAroundVertical(vector: Vector3, angle: number): void {
+  if (angle === 0) {
+    return;
+  }
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  vector.set(vector.x * cos + vector.z * sin, vector.y, -vector.x * sin + vector.z * cos);
+}
+
+/** Turns one back bone around the vertical, toward the athlete's right by `angle`. */
+function twistBone(bone: TransformNode, frame: FloorFrame, angle: number): void {
+  leanFrom.copyFrom(frame.forward);
+  leanTo.copyFrom(frame.forward);
+  turnAroundVertical(leanTo, angle);
+  bone.computeWorldMatrix(true);
+  turnBone(bone, bone.getAbsolutePosition(), leanFrom, leanTo, 1);
 }
 
 /** Full ready stance while walking, none at a run. */

@@ -40,8 +40,12 @@ export interface GestureShape {
   readonly torsoLeanRad: number;
   /** Turn of the torso toward the dominant side at contact, in rad (that shoulder back). */
   readonly torsoTwistRad: number;
-  /** Where the hands go after contact, relative to where they met the ball (frame offset). */
+  /** How the hands travel the last stretch into the ball: a whip accelerates all the way. */
+  readonly contactEase: 'whip' | 'smooth';
+  /** Where the dominant hand goes after contact, relative to where it met the ball. */
   readonly followThrough: FrameOffset;
+  /** The same for the other hand. */
+  readonly otherFollowThrough: FrameOffset;
   /** Torso turn at the end of the follow-through, in rad. */
   readonly followThroughTwistRad: number;
   /** Poses the body passes through before contact, earliest first; empty = straight. */
@@ -120,7 +124,7 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
    * forehead, elbows out; the legs extend into the contact and the arms follow the ball.
    */
   overhead: {
-    prepareS: 0.45,
+    prepareS: 0.75,
     dominantHand: { forward: -0.06, outward: 0.1, up: -0.11 },
     otherHand: { forward: -0.06, outward: 0.1, up: -0.11 },
     elbowPole: { forward: 0.5, outward: 0.6, up: -0.4 },
@@ -132,13 +136,26 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     fingersOpen: 0.85,
     torsoLeanRad: 0,
     torsoTwistRad: 0,
+    contactEase: 'smooth',
     followThrough: { forward: 0.12, outward: 0.02, up: 0.12 },
+    otherFollowThrough: { forward: 0.12, outward: 0.02, up: 0.12 },
     followThroughTwistRad: 0,
-    windup: [],
+    windup: [
+      {
+        // Set early (Noan): the hands wait almost on the spot, only lower, and meet the ball
+        // with a short, smooth push instead of a last-moment reach.
+        atS: 0.3,
+        dominantHand: { forward: -0.12, outward: 0.11, up: -0.32 },
+        otherHand: { forward: -0.12, outward: 0.11, up: -0.32 },
+        elbowPole: { forward: 0.5, outward: 0.6, up: -0.5 },
+        torsoLeanRad: 0,
+        torsoTwistRad: 0,
+      },
+    ],
   },
   /** Manchete: low and wide, torso forward, arms straight and together in a platform. */
   bump: {
-    prepareS: 0.4,
+    prepareS: 0.7,
     dominantHand: { forward: 0.12, outward: 0.03, up: -0.12 },
     otherHand: { forward: 0.12, outward: 0.03, up: -0.12 },
     elbowPole: { forward: 0, outward: 0.3, up: -0.5 },
@@ -150,9 +167,21 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     fingersOpen: 0.5,
     torsoLeanRad: 30 * (Math.PI / 180),
     torsoTwistRad: 0,
+    contactEase: 'smooth',
     followThrough: { forward: 0.05, outward: 0, up: 0.08 },
+    otherFollowThrough: { forward: 0.05, outward: 0, up: 0.08 },
     followThroughTwistRad: 0,
-    windup: [],
+    windup: [
+      {
+        // The platform forms early, a little below the ball, and rises gently into it.
+        atS: 0.3,
+        dominantHand: { forward: 0.16, outward: 0.03, up: -0.24 },
+        otherHand: { forward: 0.16, outward: 0.03, up: -0.24 },
+        elbowPole: { forward: 0, outward: 0.3, up: -0.5 },
+        torsoLeanRad: 30 * (Math.PI / 180),
+        torsoTwistRad: 0,
+      },
+    ],
   },
   /**
    * Cortada, standing (drill rule: no jump) and controlled. Circular arm swing, the one most
@@ -163,7 +192,8 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
   spike: {
     prepareS: 1.15,
     dominantHand: { forward: -0.08, outward: 0, up: -0.03 },
-    otherHand: null,
+    // The other arm pulls down in front of the chest as the hitting arm comes through.
+    otherHand: { forward: 0.1, outward: 0.37, up: -1.2 },
     elbowPole: { forward: -0.1, outward: 0.5, up: 0.2 },
     palm: {
       facing: { forward: 1, outward: 0, up: 0.2 },
@@ -171,11 +201,15 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     },
     crouch: 0.15,
     fingersOpen: 1,
-    // Weight moves onto the front foot and the shoulders square up through the ball.
+    // Weight moves onto the front foot; the shoulders face the ball at contact.
     torsoLeanRad: 10 * (Math.PI / 180),
-    torsoTwistRad: -5 * (Math.PI / 180),
+    torsoTwistRad: 0,
+    contactEase: 'whip',
     followThrough: { forward: 0.45, outward: -0.4, up: -1.1 },
+    otherFollowThrough: { forward: -0.1, outward: -0.05, up: -0.3 },
     followThroughTwistRad: -25 * (Math.PI / 180),
+    // Hands in these poses are where they sit relative to the turned torso: the arms turn
+    // with it, so the hitting hand goes back because the trunk turns, not the shoulder alone.
     windup: [
       {
         // The wind-up is unhurried (Noan). From the ready stance the hitting arm first drops
@@ -185,27 +219,27 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
         otherHand: { forward: 0, outward: 0.45, up: -0.9 },
         elbowPole: { forward: -0.2, outward: 0.5, up: -0.4 },
         torsoLeanRad: 0,
-        torsoTwistRad: 10 * (Math.PI / 180),
+        torsoTwistRad: 15 * (Math.PI / 180),
       },
       {
-        // ...then back, behind the hip; the other arm rises toward the ball.
+        // ...then back beside the hip as the trunk turns; the other arm rises to the ball.
         atS: 0.6,
-        dominantHand: { forward: -0.55, outward: 0.05, up: -1.45 },
-        otherHand: { forward: 0.1, outward: 0.45, up: -0.5 },
-        elbowPole: { forward: -0.5, outward: 0.4, up: -0.3 },
+        dominantHand: { forward: -0.35, outward: 0.05, up: -1.4 },
+        otherHand: { forward: 0.15, outward: 0.45, up: -0.5 },
+        elbowPole: { forward: -0.4, outward: 0.5, up: -0.3 },
         torsoLeanRad: -3 * (Math.PI / 180),
-        torsoTwistRad: 20 * (Math.PI / 180),
+        torsoTwistRad: 35 * (Math.PI / 180),
       },
       {
-        // Cocked: the arm comes round behind, elbow high, hand behind the head, the hitting
-        // shoulder turned back; the other arm points at the ball. From here the whip to the
-        // ball is short and as fast as the athlete can make it.
+        // Cocked: the trunk well turned, the elbow high and the hand behind the hitting
+        // shoulder; the other arm points at the ball. From here the whip to the ball is short
+        // and as fast as the athlete can make it.
         atS: 0.17,
-        dominantHand: { forward: -0.55, outward: -0.05, up: -0.55 },
-        otherHand: { forward: 0.15, outward: 0.4, up: -0.25 },
-        elbowPole: { forward: -0.2, outward: 0.7, up: 0.6 },
+        dominantHand: { forward: -0.3, outward: 0, up: -0.5 },
+        otherHand: { forward: 0.2, outward: 0.4, up: -0.25 },
+        elbowPole: { forward: -0.2, outward: 0.7, up: 0.5 },
         torsoLeanRad: -6 * (Math.PI / 180),
-        torsoTwistRad: 35 * (Math.PI / 180),
+        torsoTwistRad: 50 * (Math.PI / 180),
       },
     ],
   },
@@ -223,7 +257,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     fingersOpen: 0.8,
     torsoLeanRad: 0,
     torsoTwistRad: 0,
+    contactEase: 'smooth',
     followThrough: { forward: 0.15, outward: 0, up: 0.05 },
+    otherFollowThrough: { forward: 0.15, outward: 0, up: 0.05 },
     followThroughTwistRad: 0,
     windup: [],
   },
@@ -241,7 +277,9 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     fingersOpen: 0.8,
     torsoLeanRad: 0,
     torsoTwistRad: 0,
+    contactEase: 'smooth',
     followThrough: { forward: 0, outward: 0, up: 0 },
+    otherFollowThrough: { forward: 0, outward: 0, up: 0 },
     followThroughTwistRad: 0,
     windup: [],
   },
@@ -259,12 +297,16 @@ export const GESTURES: Readonly<Record<GestureName, GestureShape>> = {
     fingersOpen: 1,
     torsoLeanRad: 0,
     torsoTwistRad: 0,
+    contactEase: 'smooth',
     followThrough: { forward: 0, outward: 0, up: 0.35 },
+    otherFollowThrough: { forward: 0, outward: 0, up: 0.35 },
     followThroughTwistRad: 0,
     windup: [],
   },
 };
 
+/** Share of the trunk's turn taken by the lower back; the upper back takes the rest. */
+export const LOWER_BACK_TWIST_SHARE = 0.4;
 /** The follow-through takes this share of the recovery; the rest eases back. */
 export const FOLLOW_THROUGH_SHARE = 0.6;
 /** After contact the arms go back to the ready stance (or the running arms) over this time, in s. */

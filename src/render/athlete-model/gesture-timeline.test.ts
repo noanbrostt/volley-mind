@@ -141,9 +141,23 @@ describe('handOffsetAt', () => {
     expect(covered).toBeLessThan(0.25);
   });
 
-  it('lets the other arm of the spike go for the swing', () => {
-    expect(handOffsetAt(spike, false, cocked ? cocked.atS + 0.01 : 1, out())).toBe(true);
-    expect(handOffsetAt(spike, false, 0.01, out())).toBe(false);
+  it('pulls the other arm down through the swing, accelerating less than the hitting arm', () => {
+    if (!cocked?.dominantHand || !cocked.otherHand || !spike.dominantHand || !spike.otherHand) {
+      throw new Error('the spike moves both hands');
+    }
+    const halfway = cocked.atS / 2;
+    const hitting = out();
+    const other = out();
+    expect(handOffsetAt(spike, true, halfway, hitting)).toBe(true);
+    expect(handOffsetAt(spike, false, halfway, other)).toBe(true);
+    const hittingShare =
+      (hitting.up - cocked.dominantHand.up) / (spike.dominantHand.up - cocked.dominantHand.up);
+    const otherShare =
+      (other.up - cocked.otherHand.up) / (spike.otherHand.up - cocked.otherHand.up);
+    expect(otherShare).toBeGreaterThan(hittingShare);
+    const atContact = out();
+    handOffsetAt(spike, false, 0, atContact);
+    expectOffset(atContact, spike.otherHand);
   });
 
   it('follows through after contact', () => {

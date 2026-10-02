@@ -104,8 +104,14 @@ function keysOf(shape: GestureShape): readonly GestureKey[] {
 interface KeySpan {
   from: GestureKey;
   to: GestureKey;
-  amount: number;
+  /** Raw progress from one pose to the next, 0–1 (eased by whoever moves along it). */
+  progress: number;
+  /** Whether this is the last stretch, into the ball. */
+  intoContact: boolean;
 }
+
+/** Who travels the span: each eases differently into the ball on a whip. */
+type Mover = 'dominant-hand' | 'other-hand' | 'body';
 /** Starting value of the reused span; every read fills it with real poses first. */
 const NO_POSE: GestureKey = {
   atS: 0,
@@ -115,7 +121,19 @@ const NO_POSE: GestureKey = {
   torsoLeanRad: 0,
   torsoTwistRad: 0,
 };
-const span: KeySpan = { from: NO_POSE, to: NO_POSE, amount: 0 };
+const span: KeySpan = { from: NO_POSE, to: NO_POSE, progress: 0, intoContact: false };
+
+/**
+ * How far along the span a mover is. On a whip into the ball everything accelerates all the
+ * way (fastest at contact, Noan): the hitting hand most, the other hand and the trunk less.
+ * Elsewhere poses ease in and out.
+ */
+function eased(shape: GestureShape, mover: Mover): number {
+  if (!span.intoContact || shape.contactEase !== 'whip') {
+    return smoothstep(span.progress);
+  }
+  return mover === 'dominant-hand' ? accelerate(span.progress, 3) : accelerate(span.progress, 2);
+}
 
 function spanAt(shape: GestureShape, untilContactS: number): KeySpan {
   const keys = keysOf(shape);
@@ -126,7 +144,8 @@ function spanAt(shape: GestureShape, untilContactS: number): KeySpan {
   }
   span.from = first;
   span.to = first;
-  span.amount = 0;
+  span.progress = 0;
+  span.intoContact = false;
   if (untilContactS >= first.atS) {
     return span;
   }
@@ -136,10 +155,8 @@ function spanAt(shape: GestureShape, untilContactS: number): KeySpan {
     if (from && to && untilContactS >= to.atS) {
       span.from = from;
       span.to = to;
-      const progress = (from.atS - untilContactS) / (from.atS - to.atS);
-      // Into the ball the limb accelerates all the way (fastest at contact, Noan); the
-      // preparation poses ease in and out.
-      span.amount = to.atS === 0 && from !== to ? accelerate(progress) : smoothstep(progress);
+      span.progress = (from.atS - untilContactS) / (from.atS - to.atS);
+      span.intoContact = to.atS === 0;
       return span;
     }
   }
@@ -160,7 +177,8 @@ export function handOffsetAt(
   out: MutableFrameOffset,
 ): boolean {
   if (untilContactS > 0) {
-    const { from, to, amount } = spanAt(shape, untilContactS);
+    const { from, to } = spanAt(shape, untilContactS);
+    const amount = eased(shape, dominant ? 'dominant-hand' : 'other-hand');
     const fromHand = dominant ? from.dominantHand : from.otherHand;
     const toHand = dominant ? to.dominantHand : to.otherHand;
     // A hand the next pose sets free leaves the gesture (the spike's other arm drops).
@@ -176,9 +194,10 @@ export function handOffsetAt(
   }
   copyOffset(atContact, out);
   const followed = followThroughAt(untilContactS);
-  out.forward += shape.followThrough.forward * followed;
-  out.outward += shape.followThrough.outward * followed;
-  out.up += shape.followThrough.up * followed;
+  const followThrough = dominant ? shape.followThrough : shape.otherFollowThrough;
+  out.forward += followThrough.forward * followed;
+  out.outward += followThrough.outward * followed;
+  out.up += followThrough.up * followed;
   return true;
 }
 
@@ -192,8 +211,8 @@ export function elbowPoleAt(
     copyOffset(shape.elbowPole, out);
     return;
   }
-  const { from, to, amount } = spanAt(shape, untilContactS);
-  mixOffsets(from.elbowPole, to.elbowPole, amount, out);
+  const { from, to } = spanAt(shape, untilContactS);
+  mixOffsets(from.elbowPole, to.elbowPole, eased(shape, 'body'), out);
 }
 
 /** The torso's forward bend and turn at this moment of the gesture, in rad. */
@@ -210,7 +229,8 @@ export function torsoAt(shape: GestureShape, untilContactS: number, out: TorsoPo
       (shape.followThroughTwistRad - shape.torsoTwistRad) * followThroughAt(untilContactS);
     return;
   }
-  const { from, to, amount } = spanAt(shape, untilContactS);
+  const { from, to } = spanAt(shape, untilContactS);
+  const amount = eased(shape, 'body');
   out.leanRad = from.torsoLeanRad + (to.torsoLeanRad - from.torsoLeanRad) * amount;
   out.twistRad = from.torsoTwistRad + (to.torsoTwistRad - from.torsoTwistRad) * amount;
 }
@@ -225,10 +245,9 @@ function followThroughAt(untilContactS: number): number {
     : decelerate(-untilContactS / (GESTURE_RECOVER_S * FOLLOW_THROUGH_SHARE));
 }
 
-/** Starts slow, fastest at the end (a whip). */
-function accelerate(x: number): number {
-  const t = Math.min(1, Math.max(0, x));
-  return t * t * t;
+/** Starts slow, fastest at the end (a whip); a higher power is a sharper whip. */
+function accelerate(x: number, power: number): number {
+  return Math.min(1, Math.max(0, x)) ** power;
 }
 
 /** Starts fastest, slows to a stop. */
